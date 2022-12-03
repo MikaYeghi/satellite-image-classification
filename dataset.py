@@ -5,21 +5,25 @@ from tqdm import tqdm
 from PIL import Image
 from torch.utils.data import Dataset
 from torchvision.transforms.functional import pil_to_tensor
+import random
 
 import pdb
 
 class SatelliteDataset(Dataset):
-    def __init__(self, data_path, transform=None, device='cuda') -> None:
+    def __init__(self, data_path, metadata=None, transform=None, device='cuda', shuffle=True) -> None:
         super().__init__()
         
         self.data_path = data_path
         self.transform = transform
         self.device = device
         
-        self.metadata = self.extract_metadata(data_path)
+        if metadata:
+            self.metadata = metadata
+        else:
+            self.metadata = self.extract_metadata(data_path, shuffle=shuffle)
         print(f"Loaded a data set with {self.__len__()} images.")
 
-    def extract_metadata(self, data_path):
+    def extract_metadata(self, data_path, shuffle=True):
         positive_data_path = os.path.join(data_path, "positive")
         negative_data_path = os.path.join(data_path, "negative")
         
@@ -43,7 +47,8 @@ class SatelliteDataset(Dataset):
                 "category_id": img_label
             }
             metadata.append(metadata_)
-        
+        if shuffle:
+            random.shuffle(metadata)
         return metadata
     
     def __getitem__(self, idx):
@@ -67,3 +72,19 @@ class SatelliteDataset(Dataset):
     
     def __len__(self):
         return len(self.metadata)
+    
+    def get_metadata(self):
+        return self.metadata
+    
+    def details(self):
+        total_pos = 0
+        total_neg = 0
+        for data in self.metadata:
+            if data['category_id'] == 0:
+                total_pos += 1
+            elif data['category_id'] == 1:
+                total_neg += 1
+            else:
+                raise NotImplementedError
+        text = f"Positive: {total_pos}. Negative: {total_neg}."
+        return text
