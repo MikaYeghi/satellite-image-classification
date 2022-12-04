@@ -21,6 +21,7 @@ train_transform = transforms.Compose([transforms.ToTensor()])
 test_transform = transforms.Compose([transforms.ToTensor()])
 train_set = SatelliteDataset(cfg.TRAIN_PATH, transform=train_transform, device=device)
 test_set = SatelliteDataset(cfg.TEST_PATH, transform=test_transform, device=device)
+test_set.leave_fraction_of_negatives(0.025)
 print(f"Train set. {train_set.details()}\nTest set. {test_set.details()}")
 
 """Create the dataloader"""
@@ -83,6 +84,9 @@ if not cfg.EVAL_ONLY:
 print("Running inference.")
 total_count = 0
 correct_count = 0
+TP = 0
+FP = 0
+FN = 0
 with torch.no_grad():
     activation = nn.Sigmoid()
     for images_batch, labels_batch in tqdm(test_loader):
@@ -94,6 +98,9 @@ with torch.no_grad():
         # Convert to labels
         preds = (preds > 0.5).float()
         
+        # Get the statistics for the F1-score
+        TP_, FP_, FN_ = get_F1_stats(preds, labels_batch)
+        
         # Compute the number of total and correct predictions
         correct_count_ = sum((labels_batch == preds).int()).item()
         total_count_ = len(preds)
@@ -101,7 +108,10 @@ with torch.no_grad():
         # Update the overall values
         total_count += total_count_
         correct_count += correct_count_
+        TP += TP_
+        FP += FP_
+        FN += FN_
     
     accuracy = correct_count / total_count
-    
-    print(f"Accuracy: {accuracy}")
+    F1 = 2 * TP / (2 * TP + FP + FN)
+    print(f"Accuracy: {round(100 * accuracy, 2)}%. F1-score: {round(100 * F1, 2)}%.")

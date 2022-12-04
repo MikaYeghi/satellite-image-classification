@@ -2,7 +2,7 @@ import os
 import json
 import glob
 from tqdm import tqdm
-from PIL import Image
+from PIL import Image, ImageEnhance
 from torch.utils.data import Dataset
 from torchvision.transforms.functional import pil_to_tensor
 import random
@@ -10,12 +10,15 @@ import random
 import pdb
 
 class SatelliteDataset(Dataset):
-    def __init__(self, data_path, metadata=None, transform=None, device='cuda', shuffle=True) -> None:
+    def __init__(self, data_path, metadata=None, transform=None, device='cuda', shuffle=True, brightness=1.0) -> None:
         super().__init__()
         
         self.data_path = data_path
-        self.transform = transform
         self.device = device
+        
+        # Image enhancement
+        self.brightness = brightness
+        self.transform = transform
         
         if metadata:
             self.metadata = metadata
@@ -60,6 +63,11 @@ class SatelliteDataset(Dataset):
         # Extract the image
         # NOTE: consider removing the 4-th channel
         image = Image.open(data['image_path'])
+        
+        # Modify image brightness
+        enhancer = ImageEnhance.Brightness(image)
+        image = enhancer.enhance(self.brightness)
+        
         if self.transform:
             image = self.transform(image).to(self.device)
         else:
@@ -76,7 +84,35 @@ class SatelliteDataset(Dataset):
     def get_metadata(self):
         return self.metadata
     
-    def details(self):
+    def set_brightness(self, brightness):
+        self.brightness = brightness
+        
+    def leave_fraction_of_negatives(self, fraction):
+        assert fraction >= 0.0 and fraction <= 1.0
+        total_pos, total_neg = self.get_posneg_count()
+        keep_count = int(total_neg * fraction)
+        positives, negatives = self.get_posneg()
+        negatives = random.sample(negatives, keep_count)
+        self.build_metadata_from_posneg(positives, negatives)
+    
+    def build_metadata_from_posneg(self, positives, negatives):
+        metadata = positives + negatives
+        random.shuffle(metadata)
+        self.metadata = metadata
+    
+    def get_posneg(self):
+        positives = []
+        negatives = []
+        for data in self.metadata:
+            if data['category_id'] == 0:
+                positives.append(data)
+            elif data['category_id'] == 1:
+                negatives.append(data)
+            else:
+                raise NotImplementedError
+        return (positives, negatives)
+    
+    def get_posneg_count(self):
         total_pos = 0
         total_neg = 0
         for data in self.metadata:
@@ -86,5 +122,10 @@ class SatelliteDataset(Dataset):
                 total_neg += 1
             else:
                 raise NotImplementedError
+        
+        return (total_pos, total_neg)
+    
+    def details(self):
+        total_pos, total_neg = self.get_posneg_count()
         text = f"Positive: {total_pos}. Negative: {total_neg}."
         return text
