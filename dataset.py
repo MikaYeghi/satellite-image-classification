@@ -38,7 +38,8 @@ class SatelliteDataset(Dataset):
             img_label = 0
             metadata_ = {
                 "image_path": img_path,
-                "category_id": img_label
+                "category_id": img_label,
+                "brightness": self.brightness
             }
             metadata.append(metadata_)
         
@@ -47,7 +48,8 @@ class SatelliteDataset(Dataset):
             img_label = 1
             metadata_ = {
                 "image_path": img_path,
-                "category_id": img_label
+                "category_id": img_label,
+                "brightness": self.brightness
             }
             metadata.append(metadata_)
         if shuffle:
@@ -64,9 +66,12 @@ class SatelliteDataset(Dataset):
         # NOTE: consider removing the 4-th channel
         image = Image.open(data['image_path'])
         
+        # Extract image brightness
+        brightness = data['brightness']
+        
         # Modify image brightness
         enhancer = ImageEnhance.Brightness(image)
-        image = enhancer.enhance(self.brightness)
+        image = enhancer.enhance(brightness)
         
         if self.transform:
             image = self.transform(image).to(self.device)
@@ -86,6 +91,8 @@ class SatelliteDataset(Dataset):
     
     def set_brightness(self, brightness):
         self.brightness = brightness
+        for idx in range(len(self.metadata)):
+            self.metadata[idx]['brightness'] = brightness
         
     def leave_fraction_of_negatives(self, fraction):
         assert fraction >= 0.0 and fraction <= 1.0
@@ -129,3 +136,14 @@ class SatelliteDataset(Dataset):
         total_pos, total_neg = self.get_posneg_count()
         text = f"Positive: {total_pos}. Negative: {total_neg}."
         return text
+    
+    def augment_brightness(self, brightness_levels):
+        brightness_levels = [x for x in brightness_levels if x != 0.0] # exclude 0.0 to avoid confusion during training
+        print("Augmenting the data set.")
+        new_metadata = []
+        for data in tqdm(self.metadata):
+            for brightness in brightness_levels:
+                data_ = data.copy()
+                data_['brightness'] = brightness
+                new_metadata.append(data_)
+        self.metadata = new_metadata

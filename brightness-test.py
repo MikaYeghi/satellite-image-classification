@@ -8,6 +8,8 @@ from torch.nn import BCELoss
 from torchvision import transforms
 from sklearn.model_selection import train_test_split
 from matplotlib import pyplot as plt
+import pandas as pd
+import seaborn as sn
 
 from dataset import SatelliteDataset
 from utils import make_train_step, plot_training_info, get_F1_stats
@@ -32,6 +34,7 @@ model.to(device)
 print("Running brightness tests.")
 accuracies = []
 F1_scores = []
+confusion_matrices = []
 for brightness in cfg.BRIGHTNESS_LEVELS:
     print(f"Brightness level: {brightness}.")
     total_count = 0
@@ -41,7 +44,7 @@ for brightness in cfg.BRIGHTNESS_LEVELS:
     FN = 0
     test_set = SatelliteDataset(cfg.TEST_PATH, transform=test_transform, device=device)
     test_set.set_brightness(brightness)
-    test_set.leave_fraction_of_negatives(0.025)
+    # test_set.leave_fraction_of_negatives(0.025)
     test_loader = DataLoader(test_set, batch_size=cfg.BATCH_SIZE)
     print(test_set.details())
     
@@ -74,6 +77,21 @@ for brightness in cfg.BRIGHTNESS_LEVELS:
         F1 = 2 * TP / (2 * TP + FP + FN)
         F1_scores.append(F1)
         accuracies.append(accuracy)
+        
+        # Generate the confusion matrix
+        TN = total_count - TP - FP - FN
+        if TP == 0 and FP == 0:
+            TP = 0
+            FP = 1
+        confusion_matrix = torch.tensor([
+            [TP / (TP + FN), FP / (TN + FP)],
+            [FN / (TP + FN), TN / (TN + FP)]
+        ])
+        confusion_matrix = pd.DataFrame(confusion_matrix, 
+                                        index=["Predicted positive", "Predicted negative"],
+                                        columns=["Actual positive", "Actual negative"]
+        )
+        confusion_matrices.append(confusion_matrix)
         print(f"Brightness: {brightness}. Accuracy: {round(100 * accuracy, 2)}%. F1-score: {round(100 * F1, 2)}%.")
 
 # Plot the info
@@ -81,10 +99,21 @@ plt.figure()
 plt.plot(cfg.BRIGHTNESS_LEVELS, F1_scores, 'b')
 plt.grid(True)
 plt.xlabel("Brightness level")
-plt.ylabel("Accuracy")
-plt.title("Model accuracy vs brightness level")
+plt.ylabel("F1 score")
+plt.title("F1 score vs brightness level")
 plt.xlim([0.0, 1.0])
 plt.ylim([0.0, 1.0])
 save_dir = "results/brightness-test.jpg"
 print(f"Saving brightness test results to {save_dir}")
+plt.savefig(save_dir)
+plt.close('all')
+
+# Plot confusion matrices
+save_dir = "results/confmats.jpg"
+print(f"Saving confusion matrices to {save_dir}")
+plt.figure(figsize=(15.0, 8.0))
+for idx in range(len(confusion_matrices)):
+    plt.subplot(2, 3, idx + 1)
+    plt.title(f"Brightness: {cfg.BRIGHTNESS_LEVELS[idx]}")
+    sn.heatmap(confusion_matrices[idx], annot=True, cmap="Blues")
 plt.savefig(save_dir)
