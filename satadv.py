@@ -8,6 +8,8 @@ from torch.nn import BCELoss
 from matplotlib import pyplot as plt
 import random
 from tqdm import tqdm
+import torchvision.transforms as T
+from torchvision.utils import save_image
 
 from renderer import Renderer
 from utils import random_unique_split
@@ -85,11 +87,9 @@ class SatAdv(nn.Module):
                     random_number = random.uniform(0, 1)
                     if random_number > 0.5:
                         # Negative class (i.e. background)
-                        synthetic_image = image.permute(1, 2, 0).clone().detach().cpu().numpy()
+                        synthetic_image = image
                         save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "train", "negative", f"image_{negative_counter}.png")
-                        plt.imshow(synthetic_image)
-                        plt.savefig(save_dir)
-                        plt.close('all')
+                        save_image(synthetic_image, save_dir)
                         negative_counter += 1
                     else:
                         # Positive class (i.e. with vehicle)
@@ -99,7 +99,7 @@ class SatAdv(nn.Module):
                         elevation = random.uniform(70, 110)
                         azimuth = random.uniform(0, 360)
                         lights_direction = self.lights_direction.clone()
-                        scaling_factor = random.uniform(0.55, 0.65)
+                        scaling_factor = random.uniform(0.80, 0.90)
                         
                         # Render and save the image
                         synthetic_image = self.renderer.render(
@@ -111,14 +111,10 @@ class SatAdv(nn.Module):
                             lights_direction,
                             scaling_factor=scaling_factor,
                         )
-                        synthetic_image = synthetic_image.clone().detach().cpu().numpy()
                         save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "train", "positive", f"image_{positive_counter}.png")
-                        plt.imshow(synthetic_image)
-                        plt.savefig(save_dir)
-                        plt.close('all')
+                        save_image(synthetic_image.permute(2, 0, 1), save_dir)
                         positive_counter += 1
-            # if positive_counter >= 100:
-            #     break
+
         print(f"Generated {positive_counter} positive images and {negative_counter} negative images for the trainin set.")
         
         # Train set
@@ -133,9 +129,7 @@ class SatAdv(nn.Module):
                         # Negative class (i.e. background)
                         synthetic_image = image.permute(1, 2, 0).clone().detach().cpu().numpy()
                         save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "test", "negative", f"image_{negative_counter}.png")
-                        plt.imshow(synthetic_image)
-                        plt.savefig(save_dir)
-                        plt.close('all')
+                        save_image(synthetic_image, save_dir)
                         negative_counter += 1
                     else:
                         # Positive class (i.e. with vehicle)
@@ -157,14 +151,9 @@ class SatAdv(nn.Module):
                             lights_direction,
                             scaling_factor=scaling_factor,
                         )
-                        synthetic_image = synthetic_image.clone().detach().cpu().numpy()
                         save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "test", "positive", f"image_{positive_counter}.png")
-                        plt.imshow(synthetic_image)
-                        plt.savefig(save_dir)
-                        plt.close('all')
+                        save_image(synthetic_image.permute(2, 0, 1), save_dir)
                         positive_counter += 1
-            # if positive_counter >= 100:
-            #     break
             
         print(f"Generated {positive_counter} positive images and {negative_counter} negative images for the trainin set.")
     
