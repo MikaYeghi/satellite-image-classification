@@ -114,8 +114,10 @@ class SatAdv(nn.Module):
                         save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "train", "positive", f"image_{positive_counter}.png")
                         save_image(synthetic_image.permute(2, 0, 1), save_dir)
                         positive_counter += 1
+            if positive_counter >= 10000:
+                break
 
-        print(f"Generated {positive_counter} positive images and {negative_counter} negative images for the trainin set.")
+        print(f"Generated {positive_counter} positive images and {negative_counter} negative images for the training set.")
         
         # Train set
         print("Generating testing synthetic dataset.")
@@ -127,7 +129,7 @@ class SatAdv(nn.Module):
                     random_number = random.uniform(0, 1)
                     if random_number > 0.5:
                         # Negative class (i.e. background)
-                        synthetic_image = image.permute(1, 2, 0).clone().detach().cpu().numpy()
+                        synthetic_image = image
                         save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "test", "negative", f"image_{negative_counter}.png")
                         save_image(synthetic_image, save_dir)
                         negative_counter += 1
@@ -154,8 +156,10 @@ class SatAdv(nn.Module):
                         save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "test", "positive", f"image_{positive_counter}.png")
                         save_image(synthetic_image.permute(2, 0, 1), save_dir)
                         positive_counter += 1
+            if positive_counter >= 1000:
+                break
             
-        print(f"Generated {positive_counter} positive images and {negative_counter} negative images for the trainin set.")
+        print(f"Generated {positive_counter} positive images and {negative_counter} negative images for the testing set.")
     
     def attack_image_mesh(self, mesh, background_image):
         image = self.render_synthetic_image(mesh, background_image)

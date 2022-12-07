@@ -37,7 +37,6 @@ class Renderer(nn.Module):
     
     def render(self, mesh, background_image, distance, elevation, azimuth, lights_direction, 
                scaling_factor=0.85, image_size=250, blur_radius=0.0, faces_per_pixel=1):
-        pdb.set_trace()
         transform = tv_transf.Resize((250, 250))
         background_image = transform(background_image).permute(1, 2, 0)
         R, T = look_at_view_transform(dist=distance, elev=elevation, azim=azimuth)

@@ -9,7 +9,7 @@ from torchvision import transforms
 from sklearn.model_selection import train_test_split
 
 from dataset import SatelliteDataset
-from utils import make_train_step, plot_training_info
+from utils import make_train_step, plot_training_info, get_F1_stats
 
 import config as cfg
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
@@ -21,8 +21,8 @@ train_transform = transforms.Compose([transforms.ToTensor()])
 test_transform = transforms.Compose([transforms.ToTensor()])
 train_set = SatelliteDataset(cfg.TRAIN_PATH, transform=train_transform, device=device)
 test_set = SatelliteDataset(cfg.TEST_PATH, transform=test_transform, device=device)
-test_set.leave_fraction_of_negatives(0.025)
-train_set.augment_brightness(cfg.BRIGHTNESS_LEVELS)
+# test_set.leave_fraction_of_negatives(0.025)
+# train_set.augment_brightness(cfg.BRIGHTNESS_LEVELS)
 print(f"Train set. {train_set.details()}\nTest set. {test_set.details()}")
 
 """Create the dataloader"""
