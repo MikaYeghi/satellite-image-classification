@@ -2,6 +2,7 @@ import os
 from torch import nn
 from matplotlib import pyplot as plt
 import torch
+from random import shuffle
 
 import pdb
 
@@ -56,3 +57,11 @@ def extract_samples(dataset, category_id, n_samples):
         if label == category_id:
             samples.append((image, label))
     return samples
+
+def random_unique_split(original_list, len1, len2):
+    assert len1 + len2 == len(original_list), "The sum of sublist lengths is different from the original list length!"
+    shuffle(original_list)
+    sublist1 = original_list[:len1]
+    sublist2 = original_list[len1:]
+    
+    return (sublist1, sublist2)

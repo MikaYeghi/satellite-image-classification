@@ -12,11 +12,13 @@ device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 import pdb
 
 """Load the dataset"""
-dataset_transform = transforms.Compose([transforms.ToTensor()])
-train_set = SatelliteDataset(cfg.TRAIN_PATH, transform=dataset_transform, device=device)
+train_transform = transforms.Compose([transforms.ToTensor()])
+test_transform = transforms.Compose([transforms.ToTensor()])
+train_set = SatelliteDataset(cfg.TRAIN_PATH, transform=train_transform, device=device)
+test_set = SatelliteDataset(cfg.TEST_PATH, transform=test_transform, device=device)
 
 """Extract samples of background"""
-samples = extract_samples(train_set, 1, 3)
+# samples = extract_samples(test_set, 1, 3)
 
 """Plot the samples"""
 # k = 0
@@ -25,6 +27,7 @@ samples = extract_samples(train_set, 1, 3)
 #     plt.imshow(img)
 #     plt.savefig(f"results/img_{k}.jpg")
 #     plt.close('all')
+#     print(f"Sample {k}, label {sample[1]}")
 #     k += 1
 
 
@@ -32,9 +35,17 @@ samples = extract_samples(train_set, 1, 3)
 adv_net = SatAdv(cfg)
 
 """Print model details"""
-for name, param in adv_net.named_parameters():
-    if param.requires_grad:
-        print(name)
+# for name, param in adv_net.named_parameters():
+#     if param.requires_grad:
+#         print(name)
 
 """Generate a sample synthetic image"""
-x = adv_net.render_synthetic_image(adv_net.meshes[0], samples[0][0].permute(1,2,0))
+# mesh = adv_net.meshes[0].clone()
+# background_image = samples[0][0].clone().permute(1, 2, 0)
+# sample_img = adv_net.render_synthetic_image(mesh, background_image)
+
+"""Attack an image"""
+# adv_net.attack_image_mesh(mesh, background_image)
+
+"""Generate synthetic dataset"""
+adv_net.generate_synthetic_dataset(train_set, test_set)

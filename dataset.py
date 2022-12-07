@@ -19,7 +19,7 @@ class SatelliteDataset(Dataset):
         # Image enhancement
         self.brightness = brightness
         self.transform = transform
-        
+
         if metadata:
             self.metadata = metadata
         else:

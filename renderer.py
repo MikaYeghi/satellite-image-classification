@@ -1,4 +1,6 @@
 from torch import nn
+import torchvision.transforms as tv_transf
+from torchvision.transforms.functional import pil_to_tensor
 
 # Util function for loading meshes
 from pytorch3d.io import load_objs_as_meshes, load_obj, save_obj
@@ -29,11 +31,14 @@ import pdb
 class Renderer(nn.Module):
     def __init__(self, device):
         super().__init__()
+        self.avg_pool = nn.AvgPool2d(5, stride=5)
         
         self.device = device
     
     def render(self, mesh, background_image, distance, elevation, azimuth, lights_direction, 
-               scaling_factor=0.4, image_size=50, blur_radius=0.0, faces_per_pixel=1):
+               scaling_factor=0.85, image_size=250, blur_radius=0.0, faces_per_pixel=1):
+        transform = tv_transf.Resize((250, 250))
+        background_image = transform(background_image.permute(2, 0, 1)).permute(1, 2, 0)
         R, T = look_at_view_transform(dist=distance, elev=elevation, azim=azimuth)
         cameras = FoVOrthographicCameras(
             device=self.device, 
@@ -48,7 +53,8 @@ class Renderer(nn.Module):
             faces_per_pixel=faces_per_pixel, 
         )
         
-        lights = DirectionalLights(device=self.device, direction=lights_direction)
+        # lights = DirectionalLights(device=self.device, direction=lights_direction)
+        lights = PointLights(device=self.device, location=lights_direction)
         
         renderer = MeshRenderer(
             rasterizer=MeshRasterizer(
@@ -64,4 +70,7 @@ class Renderer(nn.Module):
         )
 
         images = renderer(mesh, lights=lights, cameras=cameras)
-        return images[0, ..., :3]
+        images = images.permute(0, 3, 1, 2)
+        images = self.avg_pool(images)
+        images = images[0].permute(1, 2, 0)[..., :3]
+        return images
