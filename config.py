@@ -15,3 +15,4 @@ EVAL_ONLY = True
 BRIGHTNESS_LEVELS = [1.0]
 MESHES_DIR = "/home/myeghiaz/Storage/GAN-vehicles"
 SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-0.125m-50px"
+ATTACK_LR = 0.05

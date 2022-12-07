@@ -183,7 +183,7 @@ class SatAdv(nn.Module):
             self.model.train()
             reward_fn = BCELoss()
             self.freeze_model()
-            optimizer = torch.optim.Adam([self.lights_direction], lr=self.cfg.LR)
+            optimizer = torch.optim.Adam([self.lights_direction], lr=self.cfg.ATTACK_LR)
             activation = nn.Sigmoid()
             correct_class = True
             labels_batched = torch.tensor([[0.0]], device=self.device)
