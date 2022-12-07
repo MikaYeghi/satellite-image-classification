@@ -11,3 +11,4 @@ VAL_FREQ = 1
 OUTPUT_DIR = "output/"
 EVAL_ONLY = False
 BRIGHTNESS_LEVELS = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
+MESHES_DIR = "/home/myeghiaz/Storage/GAN-vehicles"

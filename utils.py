@@ -47,3 +47,12 @@ def get_F1_stats(preds, targets):
     FP = int(torch.sum((1 - targets) * preds).item())
     FN = int(torch.sum(targets * (1 - preds)).item())
     return (TP, FP, FN)
+
+def extract_samples(dataset, category_id, n_samples):
+    samples = []
+    for image, label in dataset:
+        if len(samples) == n_samples:
+            break
+        if label == category_id:
+            samples.append((image, label))
+    return samples
