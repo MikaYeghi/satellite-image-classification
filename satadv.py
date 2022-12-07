@@ -104,7 +104,7 @@ class SatAdv(nn.Module):
                         # Render and save the image
                         synthetic_image = self.renderer.render(
                             mesh, 
-                            image.permute(1, 2, 0),
+                            image,
                             distance, 
                             elevation, 
                             azimuth,
@@ -144,7 +144,7 @@ class SatAdv(nn.Module):
                         # Render and save the image
                         synthetic_image = self.renderer.render(
                             mesh, 
-                            image.permute(1, 2, 0),
+                            image,
                             distance, 
                             elevation, 
                             azimuth,
