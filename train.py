@@ -7,6 +7,9 @@ from torch import nn
 from torch.nn import BCELoss
 from torchvision import transforms
 from sklearn.model_selection import train_test_split
+import seaborn as sn
+import pandas as pd
+from matplotlib import pyplot as plt
 
 from dataset import SatelliteDataset
 from utils import make_train_step, plot_training_info, get_F1_stats
@@ -115,4 +118,19 @@ with torch.no_grad():
     
     accuracy = correct_count / total_count
     F1 = 2 * TP / (2 * TP + FP + FN)
+    TN = total_count - TP - FN - FP
+    confusion_matrix = torch.tensor([
+            [TP / (TP + FN), FN / (TP + FN)],
+            [FP / (TN + FP), TN / (TN + FP)]
+        ])
+    confusion_matrix = pd.DataFrame(confusion_matrix, 
+                                    index=["Actual positive", "Actual negative"],
+                                    columns=["Predicted positive", "Predicted negative"]
+    )
+    # Plot the confusion matrix
+    plt.figure()
+    sn.heatmap(confusion_matrix, annot=True, cmap="Blues")
+    plt.savefig("results/confmat.jpg")
+    
+    # Print the results
     print(f"Accuracy: {round(100 * accuracy, 2)}%. F1-score: {round(100 * F1, 2)}%.")

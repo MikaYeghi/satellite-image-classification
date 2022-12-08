@@ -31,6 +31,7 @@ class SatAdv(nn.Module):
         self.distance = 5.0
         self.elevation = 90
         self.azimuth = -150
+        # self.azimuth = torch.nn.Parameter(torch.tensor(0.0, device=device, requires_grad=True))
     
     def create_model(self):
         model = models.resnet101(pretrained=True)
@@ -172,6 +173,10 @@ class SatAdv(nn.Module):
             preds = self.model(image)
             preds = activation(preds)
             preds = (preds > 0.5).float()
+            # Save the original image
+            plt.imshow(image[0].permute(1,2,0).clone().detach().cpu().numpy())
+            plt.savefig("results/img_original.jpg")
+            plt.close('all')
             print(preds)
         if preds.item() == 1:
             # If the model already predicts an incorrect class
@@ -182,7 +187,7 @@ class SatAdv(nn.Module):
             # Initial setup
             self.model.train()
             reward_fn = BCELoss()
-            self.freeze_model()
+            # self.freeze_model()
             optimizer = torch.optim.Adam([self.lights_direction], lr=self.cfg.ATTACK_LR)
             activation = nn.Sigmoid()
             correct_class = True
@@ -190,6 +195,7 @@ class SatAdv(nn.Module):
             k = 0
             # Optimize
             while correct_class:
+                self.model.train()
                 yhat = self.model(image)
                 yhat = activation(yhat)
                 loss = -reward_fn(yhat, labels_batched)
@@ -198,10 +204,21 @@ class SatAdv(nn.Module):
                 optimizer.zero_grad()
                 image = self.render_synthetic_image(mesh, background_image).permute(2, 0, 1).unsqueeze(0)
 
-                print(f"Loss: {loss}. Prediction: {yhat}.\nLights direction: {self.lights_direction}\n")
-
                 if k % 100 == 0:
                     plt.imshow(image[0].permute(1,2,0).clone().detach().cpu().numpy())
                     plt.savefig(f"results/img_{k}.jpg")
                     plt.close('all')
                 k += 1
+                
+                # Evaluate
+                self.model.eval()
+                preds = self.model(image)
+                preds = activation(preds)
+                if preds.item() > 0.5:
+                    correct_class = False
+                    print("Adversarial attack successful!")
+                    plt.imshow(image[0].permute(1,2,0).clone().detach().cpu().numpy())
+                    plt.savefig("results/img_final.jpg")
+                    plt.close('all')
+                
+                print(f"Loss: {loss}. Train pred: {yhat}. Eval pred: {preds}\nLights direction: {self.lights_direction}\n")
