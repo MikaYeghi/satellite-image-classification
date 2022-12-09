@@ -13,6 +13,7 @@ import seaborn as sn
 
 from dataset import SatelliteDataset
 from utils import make_train_step, plot_training_info, get_F1_stats
+from evaluator import SatEvaluator
 
 import config as cfg
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
@@ -29,6 +30,7 @@ if cfg.MODEL_WEIGHTS:
     print(f"Loading model weights from {cfg.MODEL_WEIGHTS}")
     model.load_state_dict(torch.load(cfg.MODEL_WEIGHTS))
 model.to(device)
+evaluator = SatEvaluator(device=device, pos_label=0, results_dir=cfg.RESULTS_DIR)
 
 """Inference"""
 print("Running brightness tests.")
@@ -37,16 +39,12 @@ F1_scores = []
 confusion_matrices = []
 for brightness in cfg.BRIGHTNESS_LEVELS:
     print(f"Brightness level: {brightness}.")
-    total_count = 0
-    correct_count = 0
-    TP = 0
-    FP = 0
-    FN = 0
     test_set = SatelliteDataset(cfg.TEST_PATH, transform=test_transform, device=device)
     test_set.set_brightness(brightness)
     # test_set.leave_fraction_of_negatives(0.025)
     test_loader = DataLoader(test_set, batch_size=cfg.BATCH_SIZE)
     print(test_set.details())
+    evaluator.reset()
     
     with torch.no_grad():
         activation = nn.Sigmoid()
@@ -59,34 +57,16 @@ for brightness in cfg.BRIGHTNESS_LEVELS:
             # Convert to labels
             preds = (preds > 0.5).float()
             
-            # Get the statistics for the F1-score
-            TP_, FP_, FN_ = get_F1_stats(preds, labels_batch)
+            # Record the predictions
+            evaluator.record_preds_gt(preds, labels_batch)
 
-            # Compute the number of total and correct predictions
-            correct_count_ = sum((labels_batch == preds).int()).item()
-            total_count_ = len(preds)
-
-            # Update the overall values
-            total_count += total_count_
-            correct_count += correct_count_
-            TP += TP_
-            FP += FP_
-            FN += FN_
-
-        accuracy = correct_count / total_count
-        F1 = 2 * TP / (2 * TP + FP + FN)
+        accuracy = evaluator.evaluate_accuracy()
+        F1 = evaluator.evaluate_f1()
         F1_scores.append(F1)
         accuracies.append(accuracy)
         
         # Generate the confusion matrix
-        TN = total_count - TP - FP - FN
-        if TP == 0 and FP == 0:
-            TP = 0
-            FP = 1
-        confusion_matrix = torch.tensor([
-            [TP / (TP + FN), FP / (TN + FP)],
-            [FN / (TP + FN), TN / (TN + FP)]
-        ])
+        confusion_matrix = evaluator.evaluate_confmat()
         confusion_matrix = pd.DataFrame(confusion_matrix, 
                                         index=["Predicted positive", "Predicted negative"],
                                         columns=["Actual positive", "Actual negative"]

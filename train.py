@@ -45,12 +45,10 @@ model.to(device)
 """Loss function, optimizer and evaluator"""
 loss_fn = BCELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=cfg.LR)
-evaluator = SatEvaluator(device=device, pos_label=0)
+evaluator = SatEvaluator(device=device, pos_label=0, results_dir=cfg.RESULTS_DIR)
 
 """Training"""
 train_step = make_train_step(model, loss_fn, optimizer)
-train_losses = []
-test_losses = []
 
 if not cfg.EVAL_ONLY:
     for epoch in range(cfg.N_EPOCHS):
@@ -60,7 +58,7 @@ if not cfg.EVAL_ONLY:
 
             loss = train_step(images_batch, labels_batch)
 
-            train_losses.append(loss)
+            evaluator.record_train_loss(loss)
 
             t.set_description(f"Epoch: #{epoch + 1}. Loss: {round(loss, 8)}")
 
@@ -79,14 +77,14 @@ if not cfg.EVAL_ONLY:
                     preds = activation(model(images_batch))
 
                     val_loss = loss_fn(preds, labels_batch)
-                    test_losses.append(val_loss.item())
+                    evaluator.record_test_loss(val_loss)
 
                     t.set_description(f"Epoch: #{epoch + 1}. Validation loss: {round(val_loss.item(), 4)}.")
 
     model_save_dir = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")
     print(f"Saving the final model to {model_save_dir}")
     torch.save(model.state_dict(), model_save_dir)
-    plot_training_info(train_losses, test_losses)
+    evaluator.plot_training_info()
 
 print("Running inference.")
 total_preds = torch.empty(size=(0, 1), device=device)
@@ -104,23 +102,12 @@ with torch.no_grad():
 
         # Record the predictions
         evaluator.record_preds_gt(preds, labels_batch)
-        # total_preds = torch.cat((total_preds, preds))
-        # total_gt = torch.cat((total_gt, labels_batch))
     
-    # accuracy = accuracy_score(total_gt.cpu(), total_preds.cpu())
-    # F1 = f1_score(total_gt.cpu(), total_preds.cpu(), pos_label=0)
-    # confusion_matrix = confusion_matrix(total_gt.cpu(), total_preds.cpu(), normalize='true')
     accuracy = evaluator.evaluate_accuracy()
     F1 = evaluator.evaluate_f1()
-    confusion_matrix = evaluator.evaluate_confmat()
-    confusion_matrix = pd.DataFrame(confusion_matrix, 
-                                    index=["Actual positive", "Actual negative"],
-                                    columns=["Predicted positive", "Predicted negative"]
-    )
+    
     # Plot the confusion matrix
-    plt.figure()
-    sn.heatmap(confusion_matrix, annot=True, cmap="Blues")
-    plt.savefig("results/confmat.jpg")
+    evaluator.plot_confmat()
     
     # Print the results
     print(f"Accuracy: {round(100 * accuracy, 2)}%. F1-score: {round(100 * F1, 2)}%.")
