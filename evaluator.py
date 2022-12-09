@@ -15,7 +15,7 @@ class SatEvaluator():
         self.total_gt = torch.empty(size=(0, 1), device=device)
         
         self.train_losses = []
-        self.val_losses = []
+        self.test_losses = []
     
     def record_preds_gt(self, preds, gt):
         self.total_preds = torch.cat((preds, self.total_preds))

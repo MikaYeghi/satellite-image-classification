@@ -11,6 +11,7 @@ import seaborn as sn
 import pandas as pd
 from matplotlib import pyplot as plt
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
+from pathlib import Path
 
 from dataset import SatelliteDataset
 from utils import make_train_step, plot_training_info, get_F1_stats
@@ -63,6 +64,7 @@ if not cfg.EVAL_ONLY:
             t.set_description(f"Epoch: #{epoch + 1}. Loss: {round(loss, 8)}")
 
         # Save the intermediate model
+        Path(cfg.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
         torch.save(model.state_dict(), os.path.join(cfg.OUTPUT_DIR, f"model_{epoch + 1}.pth"))
 
         if (epoch + 1) % cfg.VAL_FREQ == 0:

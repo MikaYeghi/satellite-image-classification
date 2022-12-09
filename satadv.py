@@ -10,6 +10,7 @@ import random
 from tqdm import tqdm
 import torchvision.transforms as T
 from torchvision.utils import save_image
+from pathlib import Path
 
 from renderer import Renderer
 from utils import random_unique_split
@@ -27,7 +28,7 @@ class SatAdv(nn.Module):
         self.meshes = self.load_meshes()
         
         # Initialize parameters
-        self.lights_direction = torch.nn.Parameter(torch.tensor([0.0,1.0,0.0], device=device, requires_grad=True).unsqueeze(0))
+        self.lights_direction = torch.nn.Parameter(torch.tensor([0.0,-1.0,0.0], device=device, requires_grad=True).unsqueeze(0))
         self.distance = 5.0
         self.elevation = 90
         self.azimuth = -150
@@ -78,6 +79,12 @@ class SatAdv(nn.Module):
         n_testing_meshes = len(self.meshes) - n_training_meshes
         train_meshes, test_meshes = random_unique_split(self.meshes, n_training_meshes, n_testing_meshes)
         
+        # Check that the path exists. If not - create it
+        Path(os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "train", "positive")).mkdir(parents=True, exist_ok=True)
+        Path(os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "train", "negative")).mkdir(parents=True, exist_ok=True)
+        Path(os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "test", "positive")).mkdir(parents=True, exist_ok=True)
+        Path(os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "test", "negative")).mkdir(parents=True, exist_ok=True)
+        
         # Train set
         print("Generating training synthetic dataset.")
         positive_counter = 0
@@ -99,8 +106,10 @@ class SatAdv(nn.Module):
                         distance = random.uniform(4.8, 5.2)
                         elevation = random.uniform(70, 110)
                         azimuth = random.uniform(0, 360)
-                        lights_direction = self.lights_direction.clone()
+                        # lights_direction = self.lights_direction.clone()
+                        lights_direction = torch.tensor([random.uniform(-1, 1),-1.0,random.uniform(-1, 1)], device=self.device, requires_grad=True).unsqueeze(0)
                         scaling_factor = random.uniform(0.80, 0.90)
+                        intensity = random.uniform(0.0, 1.0)
                         
                         # Render and save the image
                         synthetic_image = self.renderer.render(
@@ -111,16 +120,18 @@ class SatAdv(nn.Module):
                             azimuth,
                             lights_direction,
                             scaling_factor=scaling_factor,
+                            intensity=intensity,
+                            ambient_color=((0.05, 0.05, 0.05),)
                         )
                         save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "train", "positive", f"image_{positive_counter}.png")
                         save_image(synthetic_image.permute(2, 0, 1), save_dir)
                         positive_counter += 1
-            if positive_counter >= 10000:
+            if positive_counter >= 50000:
                 break
 
         print(f"Generated {positive_counter} positive images and {negative_counter} negative images for the training set.")
         
-        # Train set
+        # Test set
         print("Generating testing synthetic dataset.")
         positive_counter = 0
         negative_counter = 0
@@ -141,8 +152,10 @@ class SatAdv(nn.Module):
                         distance = random.uniform(4.8, 5.2)
                         elevation = random.uniform(70, 110)
                         azimuth = random.uniform(0, 360)
-                        lights_direction = self.lights_direction.clone()
-                        scaling_factor = random.uniform(0.55, 0.65)
+                        # lights_direction = self.lights_direction.clone()
+                        lights_direction = torch.tensor([random.uniform(-1, 1),-1.0,random.uniform(-1, 1)], device=self.device, requires_grad=True).unsqueeze(0)
+                        scaling_factor = random.uniform(0.80, 0.90)
+                        intensity = random.uniform(0.0, 1.0)
                         
                         # Render and save the image
                         synthetic_image = self.renderer.render(
@@ -153,11 +166,13 @@ class SatAdv(nn.Module):
                             azimuth,
                             lights_direction,
                             scaling_factor=scaling_factor,
+                            intensity=intensity,
+                            ambient_color=((0.05, 0.05, 0.05),)
                         )
                         save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "test", "positive", f"image_{positive_counter}.png")
                         save_image(synthetic_image.permute(2, 0, 1), save_dir)
                         positive_counter += 1
-            if positive_counter >= 1000:
+            if positive_counter >= 50000:
                 break
             
         print(f"Generated {positive_counter} positive images and {negative_counter} negative images for the testing set.")

@@ -36,7 +36,7 @@ class Renderer(nn.Module):
         self.device = device
     
     def render(self, mesh, background_image, distance, elevation, azimuth, lights_direction, 
-               scaling_factor=0.85, image_size=250, blur_radius=0.0, faces_per_pixel=1):
+               scaling_factor=0.85, image_size=250, blur_radius=0.0, faces_per_pixel=1, intensity=0.3, ambient_color=((0.05, 0.05, 0.05),)):
         transform = tv_transf.Resize((250, 250))
         background_image = transform(background_image).permute(1, 2, 0)
         R, T = look_at_view_transform(dist=distance, elev=elevation, azim=azimuth)
@@ -53,8 +53,7 @@ class Renderer(nn.Module):
             faces_per_pixel=faces_per_pixel, 
         )
         
-        # lights = DirectionalLights(device=self.device, direction=lights_direction)
-        lights = PointLights(device=self.device, location=lights_direction)
+        lights = DirectionalLights(device=self.device, direction=lights_direction, ambient_color=ambient_color, diffuse_color=((intensity, intensity, intensity),))
         
         renderer = MeshRenderer(
             rasterizer=MeshRasterizer(
