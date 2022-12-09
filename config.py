@@ -12,7 +12,8 @@ else:
     raise NotImplementedError
 
 BATCH_SIZE = 1024
-MODEL_WEIGHTS = "saved_models/synthetic-diversified-baseline/model_final.pth"
+# MODEL_WEIGHTS = "saved_models/synthetic-diversified-baseline/model_final.pth"
+MODEL_WEIGHTS = None
 NUM_CLASSES = 1 # number of foreground classes
 LR = 0.000005
 N_EPOCHS = 5
@@ -23,5 +24,5 @@ RESULTS_DIR = "results/"
 EVAL_ONLY = True
 BRIGHTNESS_LEVELS = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
 MESHES_DIR = "/home/myeghiaz/Storage/GAN-vehicles"
-SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-0.125m-50px-diversified-1"
+SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-0.125m-50px-proba"
 ATTACK_LR = 0.05

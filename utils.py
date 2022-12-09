@@ -70,7 +70,6 @@ def random_unique_split(original_list, len1, len2):
 def sample_random_elev_azimuth(x_min, y_min, x_max, y_max, distance):
     """
     This function samples x and y coordinates on a plane, and converts them to elevation and azimuth angles.
-    There is a trick when generating the azimuth angle: the resulting angle is doubled, since atan covers only (-pi, pi) range. Thus, to cover the full range, the angle is doubled.
     
     It was found that x_min = y_min = -1.287 and x_max = y_max = 1.287 result in the best angles, where elevation ranges roughly from 70 to 90, and azimuth goes from 0 to 360.
     """
@@ -85,6 +84,11 @@ def sample_random_elev_azimuth(x_min, y_min, x_max, y_max, distance):
         azimuth = 0.0
     else:
         elevation = math.atan(distance / math.sqrt(x * x + y * y)) * 180.0 / math.pi
-        azimuth = math.atan(y / x) * 180.0 / math.pi * 2.0 # added a factor of 2 to cover the entire 360 range
+        azimuth = math.atan(y / x) * 180.0 / math.pi
+        if x < 0:
+            if y > 0:
+                azimuth += 180
+            else:
+                azimuth -= 180
     
     return (elevation, azimuth)

@@ -32,7 +32,6 @@ class SatAdv(nn.Module):
         self.distance = 5.0
         self.elevation = 90
         self.azimuth = -150
-        # self.azimuth = torch.nn.Parameter(torch.tensor(0.0, device=device, requires_grad=True))
     
     def create_model(self):
         model = models.resnet101(pretrained=True)
@@ -73,6 +72,61 @@ class SatAdv(nn.Module):
                                      self.lights_direction
                                     )
     
+    def generate_synthetic_subset(self, dataset, dataset_type, meshes):
+        print(f"Generating {dataset_type} synthetic dataset.")
+        positive_counter = 0
+        negative_counter = 0
+        azs = []
+        els = []
+        for image, label in tqdm(dataset):
+            if label == 1: # select only negative samples, i.e. without real cars
+                for mesh in meshes: # place each vehicle in the image
+                    random_number = random.uniform(0, 1)
+                    if random_number > 0.5:
+                        # Negative class (i.e. background)
+                        synthetic_image = image
+                        save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, dataset_type, "negative", f"image_{negative_counter}.png")
+                        save_image(synthetic_image, save_dir)
+                        negative_counter += 1
+                    else:
+                        # Positive class (i.e. with vehicle)
+                        
+                        # Generate randomized parameters for rendering
+                        distance = 5.0
+                        elevation, azimuth = sample_random_elev_azimuth(-1.287, -1.287, 1.287, 1.287, 5.0) # The numbers were selected to make sure that the elevation is above 70 degrees
+                        azs.append(azimuth)
+                        els.append(elevation)
+                        # lights_direction = self.lights_direction.clone()
+                        lights_direction = torch.tensor([random.uniform(-1, 1),-1.0,random.uniform(-1, 1)], device=self.device, requires_grad=True).unsqueeze(0)
+                        scaling_factor = random.uniform(0.70, 0.80)
+                        intensity = random.uniform(0.0, 1.0)
+                        
+                        # Render and save the image
+                        synthetic_image = self.renderer.render(
+                            mesh, 
+                            image,
+                            distance, 
+                            elevation, 
+                            azimuth,
+                            lights_direction,
+                            scaling_factor=scaling_factor,
+                            intensity=intensity,
+                            ambient_color=((0.05, 0.05, 0.05),)
+                        )
+                        save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, dataset_type, "positive", f"image_{positive_counter}.png")
+                        save_image(synthetic_image.permute(2, 0, 1), save_dir)
+                        positive_counter += 1
+            if positive_counter >= 1000:
+                plt.close('all')
+                plt.hist(azs, bins=20)
+                plt.savefig('results/azs.jpg')
+                plt.close('all')
+                plt.hist(els, bins=20)
+                plt.savefig('results/els.jpg')
+                break
+
+        print(f"Generated {positive_counter} positive images and {negative_counter} negative images for the training set.")
+    
     def generate_synthetic_dataset(self, train_set, test_set):
         # Sample the meshes into training and testing meshes
         n_training_meshes = len(self.meshes) // 2
@@ -85,95 +139,8 @@ class SatAdv(nn.Module):
         Path(os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "test", "positive")).mkdir(parents=True, exist_ok=True)
         Path(os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "test", "negative")).mkdir(parents=True, exist_ok=True)
         
-        # Train set
-        print("Generating training synthetic dataset.")
-        positive_counter = 0
-        negative_counter = 0
-        for image, label in tqdm(train_set):
-            if label == 1: # select only negative samples, i.e. without real cars
-                for mesh in train_meshes: # place each vehicle in the image
-                    random_number = random.uniform(0, 1)
-                    if random_number > 0.5:
-                        # Negative class (i.e. background)
-                        synthetic_image = image
-                        save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "train", "negative", f"image_{negative_counter}.png")
-                        save_image(synthetic_image, save_dir)
-                        negative_counter += 1
-                    else:
-                        # Positive class (i.e. with vehicle)
-                        
-                        # Generate randomized parameters for rendering
-                        distance = 5.0
-                        elevation, azimuth = sample_random_elev_azimuth(-1.287, -1.287, 1.287, 1.287, 5.0) # The numbers were selected to make sure that the elevation is above 70 degrees
-                        # lights_direction = self.lights_direction.clone()
-                        lights_direction = torch.tensor([random.uniform(-1, 1),-1.0,random.uniform(-1, 1)], device=self.device, requires_grad=True).unsqueeze(0)
-                        scaling_factor = random.uniform(0.70, 0.80)
-                        intensity = random.uniform(0.0, 1.0)
-                        
-                        # Render and save the image
-                        synthetic_image = self.renderer.render(
-                            mesh, 
-                            image,
-                            distance, 
-                            elevation, 
-                            azimuth,
-                            lights_direction,
-                            scaling_factor=scaling_factor,
-                            intensity=intensity,
-                            ambient_color=((0.05, 0.05, 0.05),)
-                        )
-                        save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "train", "positive", f"image_{positive_counter}.png")
-                        save_image(synthetic_image.permute(2, 0, 1), save_dir)
-                        positive_counter += 1
-            if positive_counter >= 1000:
-                break
-
-        print(f"Generated {positive_counter} positive images and {negative_counter} negative images for the training set.")
-        
-        # Test set
-        print("Generating testing synthetic dataset.")
-        positive_counter = 0
-        negative_counter = 0
-        for image, label in tqdm(test_set):
-            if label == 1: # select only negative samples, i.e. without real cars
-                for mesh in test_meshes: # place each vehicle in the image
-                    random_number = random.uniform(0, 1)
-                    if random_number > 0.5:
-                        # Negative class (i.e. background)
-                        synthetic_image = image
-                        save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "test", "negative", f"image_{negative_counter}.png")
-                        save_image(synthetic_image, save_dir)
-                        negative_counter += 1
-                    else:
-                        # Positive class (i.e. with vehicle)
-                        
-                        # Generate randomized parameters for rendering
-                        distance = random.uniform(4.8, 5.2)
-                        elevation, azimuth = sample_random_elev_azimuth(-1.287, -1.287, 1.287, 1.287, 5.0) # The numbers were selected to make sure that the elevation is above 70 degrees
-                        # lights_direction = self.lights_direction.clone()
-                        lights_direction = torch.tensor([random.uniform(-1, 1),-1.0,random.uniform(-1, 1)], device=self.device, requires_grad=True).unsqueeze(0)
-                        scaling_factor = random.uniform(0.70, 0.80)
-                        intensity = random.uniform(0.0, 1.0)
-                        
-                        # Render and save the image
-                        synthetic_image = self.renderer.render(
-                            mesh, 
-                            image,
-                            distance, 
-                            elevation, 
-                            azimuth,
-                            lights_direction,
-                            scaling_factor=scaling_factor,
-                            intensity=intensity,
-                            ambient_color=((0.05, 0.05, 0.05),)
-                        )
-                        save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "test", "positive", f"image_{positive_counter}.png")
-                        save_image(synthetic_image.permute(2, 0, 1), save_dir)
-                        positive_counter += 1
-            if positive_counter >= 1000:
-                break
-            
-        print(f"Generated {positive_counter} positive images and {negative_counter} negative images for the testing set.")
+        self.generate_synthetic_subset(train_set, "train", train_meshes)
+        self.generate_synthetic_subset(test_set, "test", test_meshes)
     
     def attack_image_mesh(self, mesh, background_image):
         image = self.render_synthetic_image(mesh, background_image)
