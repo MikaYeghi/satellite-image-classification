@@ -10,9 +10,11 @@ from sklearn.model_selection import train_test_split
 import seaborn as sn
 import pandas as pd
 from matplotlib import pyplot as plt
+from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 
 from dataset import SatelliteDataset
 from utils import make_train_step, plot_training_info, get_F1_stats
+from evaluator import SatEvaluator
 
 import config as cfg
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
@@ -40,9 +42,10 @@ if cfg.MODEL_WEIGHTS:
     model.load_state_dict(torch.load(cfg.MODEL_WEIGHTS))
 model.to(device)
 
-"""Loss function and optimizer"""
+"""Loss function, optimizer and evaluator"""
 loss_fn = BCELoss()
 optimizer = torch.optim.Adam(model.parameters(), lr=cfg.LR)
+evaluator = SatEvaluator(device=device, pos_label=0)
 
 """Training"""
 train_step = make_train_step(model, loss_fn, optimizer)
@@ -86,11 +89,8 @@ if not cfg.EVAL_ONLY:
     plot_training_info(train_losses, test_losses)
 
 print("Running inference.")
-total_count = 0
-correct_count = 0
-TP = 0
-FP = 0
-FN = 0
+total_preds = torch.empty(size=(0, 1), device=device)
+total_gt = torch.empty(size=(0, 1), device=device)
 with torch.no_grad():
     activation = nn.Sigmoid()
     for images_batch, labels_batch in tqdm(test_loader):
@@ -101,28 +101,18 @@ with torch.no_grad():
         
         # Convert to labels
         preds = (preds > 0.5).float()
-        
-        # Get the statistics for the F1-score
-        TP_, FP_, FN_ = get_F1_stats(preds, labels_batch)
-        
-        # Compute the number of total and correct predictions
-        correct_count_ = sum((labels_batch == preds).int()).item()
-        total_count_ = len(preds)
-        
-        # Update the overall values
-        total_count += total_count_
-        correct_count += correct_count_
-        TP += TP_
-        FP += FP_
-        FN += FN_
+
+        # Record the predictions
+        evaluator.record_preds_gt(preds, labels_batch)
+        # total_preds = torch.cat((total_preds, preds))
+        # total_gt = torch.cat((total_gt, labels_batch))
     
-    accuracy = correct_count / total_count
-    F1 = 2 * TP / (2 * TP + FP + FN)
-    TN = total_count - TP - FN - FP
-    confusion_matrix = torch.tensor([
-            [TP / (TP + FN), FN / (TP + FN)],
-            [FP / (TN + FP), TN / (TN + FP)]
-        ])
+    # accuracy = accuracy_score(total_gt.cpu(), total_preds.cpu())
+    # F1 = f1_score(total_gt.cpu(), total_preds.cpu(), pos_label=0)
+    # confusion_matrix = confusion_matrix(total_gt.cpu(), total_preds.cpu(), normalize='true')
+    accuracy = evaluator.evaluate_accuracy()
+    F1 = evaluator.evaluate_f1()
+    confusion_matrix = evaluator.evaluate_confmat()
     confusion_matrix = pd.DataFrame(confusion_matrix, 
                                     index=["Actual positive", "Actual negative"],
                                     columns=["Predicted positive", "Predicted negative"]
