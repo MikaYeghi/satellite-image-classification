@@ -28,7 +28,7 @@ class SatAdv(nn.Module):
         self.meshes = self.load_meshes()
         
         # Initialize parameters
-        self.lights_direction = torch.nn.Parameter(torch.tensor([0.0,-1.0,0.0], device=device, requires_grad=True).unsqueeze(0))
+        self.lights_direction = torch.tensor([0.0,-1.0,0.0], device=device, requires_grad=True).unsqueeze(0)
         self.distance = 5.0
         self.elevation = 90
         self.azimuth = -150
@@ -76,8 +76,6 @@ class SatAdv(nn.Module):
         print(f"Generating {dataset_type} synthetic dataset.")
         positive_counter = 0
         negative_counter = 0
-        azs = []
-        els = []
         for image, label in tqdm(dataset):
             if label == 1: # select only negative samples, i.e. without real cars
                 for mesh in meshes: # place each vehicle in the image
@@ -94,9 +92,6 @@ class SatAdv(nn.Module):
                         # Generate randomized parameters for rendering
                         distance = 5.0
                         elevation, azimuth = sample_random_elev_azimuth(-1.287, -1.287, 1.287, 1.287, 5.0) # The numbers were selected to make sure that the elevation is above 70 degrees
-                        azs.append(azimuth)
-                        els.append(elevation)
-                        # lights_direction = self.lights_direction.clone()
                         lights_direction = torch.tensor([random.uniform(-1, 1),-1.0,random.uniform(-1, 1)], device=self.device, requires_grad=True).unsqueeze(0)
                         scaling_factor = random.uniform(0.70, 0.80)
                         intensity = random.uniform(0.0, 1.0)
@@ -117,14 +112,7 @@ class SatAdv(nn.Module):
                         save_image(synthetic_image.permute(2, 0, 1), save_dir)
                         positive_counter += 1
             if positive_counter >= 1000:
-                plt.close('all')
-                plt.hist(azs, bins=20)
-                plt.savefig('results/azs.jpg')
-                plt.close('all')
-                plt.hist(els, bins=20)
-                plt.savefig('results/els.jpg')
                 break
-
         print(f"Generated {positive_counter} positive images and {negative_counter} negative images for the training set.")
     
     def generate_synthetic_dataset(self, train_set, test_set):
