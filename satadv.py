@@ -13,7 +13,7 @@ from torchvision.utils import save_image
 from pathlib import Path
 
 from renderer import Renderer
-from utils import random_unique_split
+from utils import random_unique_split, sample_random_elev_azimuth
 
 import pdb
 
@@ -103,12 +103,11 @@ class SatAdv(nn.Module):
                         # Positive class (i.e. with vehicle)
                         
                         # Generate randomized parameters for rendering
-                        distance = random.uniform(4.8, 5.2)
-                        elevation = random.uniform(70, 110)
-                        azimuth = random.uniform(0, 360)
+                        distance = 5.0
+                        elevation, azimuth = sample_random_elev_azimuth(-1.287, -1.287, 1.287, 1.287, 5.0) # The numbers were selected to make sure that the elevation is above 70 degrees
                         # lights_direction = self.lights_direction.clone()
                         lights_direction = torch.tensor([random.uniform(-1, 1),-1.0,random.uniform(-1, 1)], device=self.device, requires_grad=True).unsqueeze(0)
-                        scaling_factor = random.uniform(0.80, 0.90)
+                        scaling_factor = random.uniform(0.70, 0.80)
                         intensity = random.uniform(0.0, 1.0)
                         
                         # Render and save the image
@@ -126,7 +125,7 @@ class SatAdv(nn.Module):
                         save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "train", "positive", f"image_{positive_counter}.png")
                         save_image(synthetic_image.permute(2, 0, 1), save_dir)
                         positive_counter += 1
-            if positive_counter >= 50000:
+            if positive_counter >= 1000:
                 break
 
         print(f"Generated {positive_counter} positive images and {negative_counter} negative images for the training set.")
@@ -150,11 +149,10 @@ class SatAdv(nn.Module):
                         
                         # Generate randomized parameters for rendering
                         distance = random.uniform(4.8, 5.2)
-                        elevation = random.uniform(70, 110)
-                        azimuth = random.uniform(0, 360)
+                        elevation, azimuth = sample_random_elev_azimuth(-1.287, -1.287, 1.287, 1.287, 5.0) # The numbers were selected to make sure that the elevation is above 70 degrees
                         # lights_direction = self.lights_direction.clone()
                         lights_direction = torch.tensor([random.uniform(-1, 1),-1.0,random.uniform(-1, 1)], device=self.device, requires_grad=True).unsqueeze(0)
-                        scaling_factor = random.uniform(0.80, 0.90)
+                        scaling_factor = random.uniform(0.70, 0.80)
                         intensity = random.uniform(0.0, 1.0)
                         
                         # Render and save the image
@@ -172,7 +170,7 @@ class SatAdv(nn.Module):
                         save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "test", "positive", f"image_{positive_counter}.png")
                         save_image(synthetic_image.permute(2, 0, 1), save_dir)
                         positive_counter += 1
-            if positive_counter >= 50000:
+            if positive_counter >= 1000:
                 break
             
         print(f"Generated {positive_counter} positive images and {negative_counter} negative images for the testing set.")
