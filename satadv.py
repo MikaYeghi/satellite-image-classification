@@ -11,6 +11,7 @@ from tqdm import tqdm
 import torchvision.transforms as T
 from torchvision.utils import save_image
 from pathlib import Path
+import numpy as np
 
 from renderer import Renderer
 from utils import random_unique_split, sample_random_elev_azimuth
@@ -132,8 +133,13 @@ class SatAdv(nn.Module):
     
     def attack_image_mesh(self, mesh, background_image):
         image = self.render_synthetic_image(mesh, background_image)
+        
+        # Save the original image
         plt.imshow(image.clone().detach().cpu().numpy())
         plt.savefig("results/test.png")
+        plt.close('all')
+        
+        # Attack the image
         image = image.permute(2, 0, 1).unsqueeze(0)
         activation = nn.Sigmoid()
         with torch.no_grad():
@@ -156,7 +162,8 @@ class SatAdv(nn.Module):
             self.model.train()
             reward_fn = BCELoss()
             # self.freeze_model()
-            optimizer = torch.optim.Adam([self.lights_direction], lr=self.cfg.ATTACK_LR)
+            lights_direction = torch.nn.Parameter(torch.tensor([0.0,-1.0,0.0], device=self.device, requires_grad=True).unsqueeze(0))
+            optimizer = torch.optim.Adam([lights_direction], lr=self.cfg.ATTACK_LR)
             activation = nn.Sigmoid()
             correct_class = True
             labels_batched = torch.tensor([[0.0]], device=self.device)
@@ -190,3 +197,52 @@ class SatAdv(nn.Module):
                     plt.close('all')
                 
                 print(f"Loss: {loss}. Train pred: {yhat}. Eval pred: {preds}\nLights direction: {self.lights_direction}\n")
+    
+    def find_failure_regions(self, mesh, background_image, resolution=100):
+        # Generate randomized parameters for this particular rendering (all except the tested one)
+        elevation, azimuth = sample_random_elev_azimuth(-1.287, -1.287, 1.287, 1.287, 5.0)
+        scaling_factor = random.uniform(0.70, 0.80)
+        
+        # Plot an image sample
+        # with torch.no_grad():
+        #     plt.imshow(self.renderer.render(mesh, background_image, lights_direction=((0, -1, 0),), elevation=elevation, azimuth=azimuth, scaling_factor=scaling_factor, intensity=1.0).clone().detach().cpu().numpy())
+        #     plt.savefig("results/image_sample.jpg")
+        #     plt.close('all')
+        
+        # Create the activation function
+        activation = nn.Sigmoid()
+        
+        # Generate the range of light directions that need to be tested
+        light_directions_per_axis = np.linspace(-1, 1, num=resolution)
+        
+        # Correctness heatmap
+        correctness_heatmap = torch.zeros((resolution, resolution))
+        
+        # Loop through all pixels in the correctness heatmap
+        i = 0
+        j = 0
+        with torch.no_grad():
+            for lights_direction_x in tqdm(light_directions_per_axis):
+                j = 0
+                for lights_direction_z in light_directions_per_axis:
+                    lights_direction = torch.tensor([lights_direction_x, -1, lights_direction_z], device=self.device).unsqueeze(0)
+                    rendered_image = self.renderer.render(mesh, background_image, lights_direction=lights_direction, elevation=elevation, azimuth=azimuth, scaling_factor=scaling_factor, intensity=1.0)
+                    rendered_image = rendered_image.permute(2, 0, 1).unsqueeze(0).float()
+
+                    # Run inference on the image
+                    self.model.eval()
+                    prediction = activation(self.model(rendered_image)).item()
+                    
+                    # Update the heatmap
+                    heatmap_pixel = 1 - prediction # Correct class is 0, hence invert
+                    correctness_heatmap[i][j] = heatmap_pixel
+                    
+                    j += 1
+                i += 1
+        
+        # Plot the heatmap
+        plt.imshow(correctness_heatmap, cmap='Blues')
+        plt.savefig("results/test.jpg")
+        plt.close('all')
+        
+        return correctness_heatmap

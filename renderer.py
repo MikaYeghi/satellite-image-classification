@@ -35,7 +35,7 @@ class Renderer(nn.Module):
         
         self.device = device
     
-    def render(self, mesh, background_image, distance, elevation, azimuth, lights_direction, 
+    def render(self, mesh, background_image, elevation, azimuth, lights_direction, distance=5.0, 
                scaling_factor=0.85, image_size=250, blur_radius=0.0, faces_per_pixel=1, intensity=0.3, ambient_color=((0.05, 0.05, 0.05),)):
         transform = tv_transf.Resize((250, 250))
         background_image = transform(background_image).permute(1, 2, 0)
