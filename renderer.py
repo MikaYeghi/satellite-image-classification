@@ -1,3 +1,4 @@
+import torch
 from torch import nn
 import torchvision.transforms as tv_transf
 from torchvision.transforms.functional import pil_to_tensor
@@ -53,7 +54,8 @@ class Renderer(nn.Module):
             faces_per_pixel=faces_per_pixel, 
         )
         
-        lights = DirectionalLights(device=self.device, direction=lights_direction, ambient_color=ambient_color, diffuse_color=((intensity, intensity, intensity),))
+        diffuse_color = intensity * torch.tensor([1.0, 1.0, 1.0], device=self.device).unsqueeze(0)
+        lights = DirectionalLights(device=self.device, direction=lights_direction, ambient_color=ambient_color, diffuse_color=diffuse_color)
         
         renderer = MeshRenderer(
             rasterizer=MeshRasterizer(

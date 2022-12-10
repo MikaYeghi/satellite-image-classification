@@ -132,7 +132,9 @@ class SatAdv(nn.Module):
         self.generate_synthetic_subset(test_set, "test", test_meshes)
     
     def attack_image_mesh(self, mesh, background_image):
-        image = self.render_synthetic_image(mesh, background_image)
+        lights_direction = torch.nn.Parameter(torch.tensor([0.0,-1.0,0.0], device=self.device, requires_grad=True).unsqueeze(0))
+        intensity = torch.nn.Parameter(torch.tensor(1.0, device=self.device, requires_grad=True))
+        image = self.renderer.render(mesh, background_image, lights_direction=lights_direction, elevation=self.elevation, azimuth=self.azimuth, intensity=intensity)
         
         # Save the original image
         plt.imshow(image.clone().detach().cpu().numpy())
@@ -153,17 +155,14 @@ class SatAdv(nn.Module):
             plt.close('all')
             print(preds)
         if preds.item() == 1:
-            # If the model already predicts an incorrect class
             print("The model already predicts an incorrect class.")
             return
         else:
             # If the model still predicts a correct class, loop until the class is flipped
-            # Initial setup
             self.model.train()
             reward_fn = BCELoss()
             # self.freeze_model()
-            lights_direction = torch.nn.Parameter(torch.tensor([0.0,-1.0,0.0], device=self.device, requires_grad=True).unsqueeze(0))
-            optimizer = torch.optim.Adam([lights_direction], lr=self.cfg.ATTACK_LR)
+            optimizer = torch.optim.Adam([lights_direction, intensity], lr=self.cfg.ATTACK_LR)
             activation = nn.Sigmoid()
             correct_class = True
             labels_batched = torch.tensor([[0.0]], device=self.device)
@@ -177,26 +176,29 @@ class SatAdv(nn.Module):
                 loss.backward()
                 optimizer.step()
                 optimizer.zero_grad()
-                image = self.render_synthetic_image(mesh, background_image).permute(2, 0, 1).unsqueeze(0)
+                
+                # Generate the updated image
+                image = self.renderer.render(mesh, background_image, lights_direction=lights_direction, elevation=self.elevation, azimuth=self.azimuth, intensity=intensity)
 
                 if k % 100 == 0:
-                    plt.imshow(image[0].permute(1,2,0).clone().detach().cpu().numpy())
+                    plt.imshow(image.clone().detach().cpu().numpy())
                     plt.savefig(f"results/img_{k}.jpg")
                     plt.close('all')
                 k += 1
-                
+
                 # Evaluate
                 self.model.eval()
+                image = image.permute(2, 0, 1).unsqueeze(0)
                 preds = self.model(image)
                 preds = activation(preds)
-                if preds.item() > 0.5:
+                if preds.item() > 0.99:
                     correct_class = False
                     print("Adversarial attack successful!")
                     plt.imshow(image[0].permute(1,2,0).clone().detach().cpu().numpy())
                     plt.savefig("results/img_final.jpg")
                     plt.close('all')
                 
-                print(f"Loss: {loss}. Train pred: {yhat}. Eval pred: {preds}\nLights direction: {self.lights_direction}\n")
+                print(f"Loss: {loss}. Train pred: {yhat}. Eval pred: {preds}\nLights direction: {lights_direction}\nIntensity: {intensity}\n")
     
     def find_failure_regions(self, mesh, background_image, resolution=100):
         # Generate randomized parameters for this particular rendering (all except the tested one)
@@ -204,10 +206,10 @@ class SatAdv(nn.Module):
         scaling_factor = random.uniform(0.70, 0.80)
         
         # Plot an image sample
-        # with torch.no_grad():
-        #     plt.imshow(self.renderer.render(mesh, background_image, lights_direction=((0, -1, 0),), elevation=elevation, azimuth=azimuth, scaling_factor=scaling_factor, intensity=1.0).clone().detach().cpu().numpy())
-        #     plt.savefig("results/image_sample.jpg")
-        #     plt.close('all')
+        with torch.no_grad():
+            plt.imshow(self.renderer.render(mesh, background_image, lights_direction=((0, -1, 0),), elevation=elevation, azimuth=azimuth, scaling_factor=scaling_factor, intensity=1.0).clone().detach().cpu().numpy())
+            plt.savefig("results/image_sample.jpg")
+            plt.close('all')
         
         # Create the activation function
         activation = nn.Sigmoid()

@@ -21,23 +21,23 @@ test_set = SatelliteDataset(cfg.TEST_PATH, transform=test_transform, device=devi
 samples = extract_samples(test_set, 1, 3)
 
 """Plot the samples"""
-k = 0
-for sample in samples:
-    img = sample[0].cpu().clone().permute(1,2,0).numpy()
-    plt.imshow(img)
-    plt.savefig(f"results/img_{k}.jpg")
-    plt.close('all')
-    print(f"Sample {k}, label {sample[1]}")
-    k += 1
+# k = 0
+# for sample in samples:
+#     img = sample[0].cpu().clone().permute(1,2,0).numpy()
+#     plt.imshow(img)
+#     plt.savefig(f"results/img_{k}.jpg")
+#     plt.close('all')
+#     print(f"Sample {k}, label {sample[1]}")
+#     k += 1
 
 
 """Initialize the adversarial attacker"""
 adv_net = SatAdv(cfg)
 
 """Print model details"""
-for name, param in adv_net.named_parameters():
-    if param.requires_grad:
-        print(name)
+# for name, param in adv_net.named_parameters():
+#     if param.requires_grad:
+#         print(name)
 
 """Generate a sample synthetic image"""
 mesh = adv_net.meshes[0].clone()
@@ -45,8 +45,8 @@ background_image = samples[0][0].clone()
 # sample_img = adv_net.render_synthetic_image(mesh, background_image)
 
 """Attack an image"""
-# adv_net.attack_image_mesh(mesh, background_image)
-adv_net.find_failure_regions(mesh, background_image, resolution=50)
+adv_net.attack_image_mesh(mesh, background_image)
+# adv_net.find_failure_regions(mesh, background_image, resolution=50)
 
 """Generate synthetic dataset"""
 # adv_net.generate_synthetic_dataset(train_set, test_set)
