@@ -41,8 +41,6 @@ class SatEvaluator():
         return confusion_matrix(self.total_gt.cpu(), self.total_preds.cpu(), normalize='true')
     
     def plot_training_info(self):
-        import pdb
-        pdb.set_trace()
         plt.figure()
         plt.subplot(211)
         plt.plot(self.train_losses, 'b')

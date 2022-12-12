@@ -2,7 +2,13 @@ from torchvision import transforms
 
 class SatTransforms:
     def __init__(self):
-        self.train_transforms = transforms.Compose([transforms.ToTensor()])
+        self.train_transforms = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.ColorJitter(brightness=0.9, contrast=0.9, saturation=0.9, hue=0.3),
+            transforms.RandomHorizontalFlip(),
+            transforms.GaussianBlur(kernel_size=3),
+            transforms.RandomRotation(degrees=180)
+        ])
         self.test_transforms = transforms.Compose([transforms.ToTensor()])
     
     def get_train_transforms(self):

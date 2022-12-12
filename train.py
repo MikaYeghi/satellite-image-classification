@@ -11,6 +11,7 @@ import pandas as pd
 from matplotlib import pyplot as plt
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 from pathlib import Path
+from torchvision.utils import save_image
 
 from dataset import SatelliteDataset
 from utils import make_train_step, plot_training_info, get_F1_stats, create_model

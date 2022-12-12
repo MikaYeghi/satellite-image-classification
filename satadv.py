@@ -79,6 +79,7 @@ class SatAdv(nn.Module):
                         save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, dataset_type, "negative", f"image_{negative_counter}.png")
                         save_image(synthetic_image, save_dir)
                         negative_counter += 1
+                        # TODO: need to add either "continue" or "break" here. Currently some negative images are repeated
                     else:
                         # Positive class (i.e. with vehicle)
                         

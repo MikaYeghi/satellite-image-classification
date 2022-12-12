@@ -63,8 +63,7 @@ class SatelliteDataset(Dataset):
         label = data['category_id']
         
         # Extract the image
-        # NOTE: consider removing the 4-th channel
-        image = Image.open(data['image_path'])
+        image = Image.open(data['image_path']).convert('RGB') # force RGB instead of RGBA
         
         # Extract image brightness
         brightness = data['brightness']
