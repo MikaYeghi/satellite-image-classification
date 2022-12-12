@@ -5,7 +5,6 @@ from torch.utils.data import DataLoader
 import torchvision.models as models
 from torch import nn
 from torch.nn import BCELoss
-from torchvision import transforms
 from sklearn.model_selection import train_test_split
 import seaborn as sn
 import pandas as pd
@@ -16,6 +15,7 @@ from pathlib import Path
 from dataset import SatelliteDataset
 from utils import make_train_step, plot_training_info, get_F1_stats, create_model
 from evaluator import SatEvaluator
+from transforms import SatTransforms
 
 import config as cfg
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
@@ -23,8 +23,9 @@ device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 import pdb
 
 """Load the data set"""
-train_transform = transforms.Compose([transforms.ToTensor()])
-test_transform = transforms.Compose([transforms.ToTensor()])
+transforms = SatTransforms()
+train_transform = transforms.get_train_transforms()
+test_transform = transforms.get_test_transforms()
 train_set = SatelliteDataset(cfg.TRAIN_PATH, transform=train_transform, device=device)
 test_set = SatelliteDataset(cfg.TEST_PATH, transform=test_transform, device=device)
 # test_set.leave_fraction_of_negatives(0.025)
@@ -74,7 +75,7 @@ if not cfg.EVAL_ONLY:
                     preds = activation(model(images_batch))
 
                     val_loss = loss_fn(preds, labels_batch)
-                    evaluator.record_test_loss(val_loss)
+                    evaluator.record_test_loss(val_loss.item())
 
                     t.set_description(f"Epoch: #{epoch + 1}. Validation loss: {round(val_loss.item(), 4)}.")
 

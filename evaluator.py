@@ -22,10 +22,14 @@ class SatEvaluator():
         self.total_gt = torch.cat((gt, self.total_gt))
         
     def record_train_loss(self, train_loss):
-        self.train_losses.append(train_loss.cpu())
+        if torch.is_tensor(train_loss):
+            train_loss = train_loss.item()
+        self.train_losses.append(train_loss)
         
     def record_test_loss(self, test_loss):
-        self.test_losses.append(test_loss.cpu())
+        if torch.is_tensor(test_loss):
+            test_loss = test_loss.item()
+        self.test_losses.append(test_loss)
         
     def evaluate_accuracy(self):
         return accuracy_score(self.total_gt.cpu(), self.total_preds.cpu())
@@ -37,6 +41,8 @@ class SatEvaluator():
         return confusion_matrix(self.total_gt.cpu(), self.total_preds.cpu(), normalize='true')
     
     def plot_training_info(self):
+        import pdb
+        pdb.set_trace()
         plt.figure()
         plt.subplot(211)
         plt.plot(self.train_losses, 'b')

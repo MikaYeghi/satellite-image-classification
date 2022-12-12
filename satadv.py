@@ -45,13 +45,15 @@ class SatAdv(nn.Module):
             text += f"{name}, {param.requires_grad}\n"
         return text
     
-    def load_meshes(self):
+    def load_meshes(self, shuffle=True):
         print(f"Loading meshes from {self.cfg.MESHES_DIR}")
         meshes = []
         obj_paths = glob.glob(self.cfg.MESHES_DIR + "/*.obj")
         for obj_path in obj_paths:
             mesh = load_objs_as_meshes([obj_path], device=self.device)[0]
             meshes.append(mesh)
+        if shuffle:
+            random.shuffle(meshes)
         return meshes
     
     def render_synthetic_image(self, mesh, background_image):

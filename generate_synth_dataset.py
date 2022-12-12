@@ -5,6 +5,7 @@ from matplotlib import pyplot as plt
 from dataset import SatelliteDataset
 from utils import extract_samples
 from satadv import SatAdv
+from transforms import SatTransforms
 
 import config as cfg
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
@@ -12,8 +13,9 @@ device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 import pdb
 
 """Load the dataset"""
-train_transform = transforms.Compose([transforms.ToTensor()])
-test_transform = transforms.Compose([transforms.ToTensor()])
+transforms = SatTransforms()
+train_transform = transforms.get_train_transforms()
+test_transform = transforms.get_test_transforms()
 train_set = SatelliteDataset(cfg.TRAIN_PATH, transform=train_transform, device=device)
 test_set = SatelliteDataset(cfg.TEST_PATH, transform=test_transform, device=device)
 
@@ -45,8 +47,8 @@ background_image = samples[0][0].clone()
 # sample_img = adv_net.render_synthetic_image(mesh, background_image)
 
 """Attack an image"""
-adv_net.attack_image_mesh(mesh, background_image)
+# adv_net.attack_image_mesh(mesh, background_image)
 # adv_net.find_failure_regions(mesh, background_image, resolution=50)
 
 """Generate synthetic dataset"""
-# adv_net.generate_synthetic_dataset(train_set, test_set)
+adv_net.generate_synthetic_dataset(train_set, test_set)

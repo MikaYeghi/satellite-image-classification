@@ -5,7 +5,6 @@ from torch.utils.data import DataLoader
 import torchvision.models as models
 from torch import nn
 from torch.nn import BCELoss
-from torchvision import transforms
 from sklearn.model_selection import train_test_split
 from matplotlib import pyplot as plt
 import pandas as pd
@@ -14,6 +13,7 @@ import seaborn as sn
 from dataset import SatelliteDataset
 from utils import make_train_step, plot_training_info, get_F1_stats, create_model
 from evaluator import SatEvaluator
+from transforms import SatTransforms
 
 import config as cfg
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
@@ -21,7 +21,8 @@ device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 import pdb
 
 """Transforms"""
-test_transform = transforms.Compose([transforms.ToTensor()])
+transforms = SatTransforms()
+test_transform = transforms.get_test_transforms()
 
 """Initialize the model"""
 model = create_model(cfg, device)
