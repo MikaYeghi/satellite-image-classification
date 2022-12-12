@@ -14,7 +14,7 @@ from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 from pathlib import Path
 
 from dataset import SatelliteDataset
-from utils import make_train_step, plot_training_info, get_F1_stats
+from utils import make_train_step, plot_training_info, get_F1_stats, create_model
 from evaluator import SatEvaluator
 
 import config as cfg
@@ -36,12 +36,7 @@ train_loader = DataLoader(train_set, batch_size=cfg.BATCH_SIZE)
 test_loader = DataLoader(test_set, batch_size=cfg.BATCH_SIZE)
 
 """Initialize the model"""
-model = models.resnet101(pretrained=True)
-model.fc = torch.nn.Linear(2048, 1, device=device, dtype=torch.float32)
-if cfg.MODEL_WEIGHTS:
-    print(f"Loading model weights from {cfg.MODEL_WEIGHTS}")
-    model.load_state_dict(torch.load(cfg.MODEL_WEIGHTS))
-model.to(device)
+model = create_model(cfg, device)
 
 """Loss function, optimizer and evaluator"""
 loss_fn = BCELoss()

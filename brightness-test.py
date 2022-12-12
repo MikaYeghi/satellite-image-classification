@@ -12,7 +12,7 @@ import pandas as pd
 import seaborn as sn
 
 from dataset import SatelliteDataset
-from utils import make_train_step, plot_training_info, get_F1_stats
+from utils import make_train_step, plot_training_info, get_F1_stats, create_model
 from evaluator import SatEvaluator
 
 import config as cfg
@@ -24,12 +24,7 @@ import pdb
 test_transform = transforms.Compose([transforms.ToTensor()])
 
 """Initialize the model"""
-model = models.resnet101(pretrained=True)
-model.fc = torch.nn.Linear(2048, 1, device=device, dtype=torch.float32)
-if cfg.MODEL_WEIGHTS:
-    print(f"Loading model weights from {cfg.MODEL_WEIGHTS}")
-    model.load_state_dict(torch.load(cfg.MODEL_WEIGHTS))
-model.to(device)
+model = create_model(cfg, device)
 evaluator = SatEvaluator(device=device, pos_label=0, results_dir=cfg.RESULTS_DIR)
 
 """Inference"""

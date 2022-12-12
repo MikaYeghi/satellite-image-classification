@@ -14,7 +14,7 @@ from pathlib import Path
 import numpy as np
 
 from renderer import Renderer
-from utils import random_unique_split, sample_random_elev_azimuth
+from utils import random_unique_split, sample_random_elev_azimuth, create_model
 
 import pdb
 
@@ -25,7 +25,7 @@ class SatAdv(nn.Module):
         self.device = device
         self.renderer = Renderer(device)
         self.cfg = cfg
-        self.model = self.create_model()
+        self.model = create_model(cfg, device)
         self.meshes = self.load_meshes()
         
         # Initialize parameters
@@ -33,16 +33,6 @@ class SatAdv(nn.Module):
         self.distance = 5.0
         self.elevation = 90
         self.azimuth = -150
-    
-    def create_model(self):
-        model = models.resnet101(pretrained=True)
-        model.fc = torch.nn.Linear(2048, 1, device=self.device, dtype=torch.float32)
-        if self.cfg.MODEL_WEIGHTS:
-            print(f"Loading model weights from {self.cfg.MODEL_WEIGHTS}")
-            model.load_state_dict(torch.load(self.cfg.MODEL_WEIGHTS))
-        model.to(self.device)
-        
-        return model
     
     def freeze_model(self):
         for name, param in self.named_parameters():
@@ -163,12 +153,12 @@ class SatAdv(nn.Module):
             reward_fn = BCELoss()
             # self.freeze_model()
             optimizer = torch.optim.Adam([lights_direction, intensity], lr=self.cfg.ATTACK_LR)
-            activation = nn.Sigmoid()
             correct_class = True
             labels_batched = torch.tensor([[0.0]], device=self.device)
             k = 0
             # Optimize
             while correct_class:
+                activation = nn.Sigmoid()
                 self.model.train()
                 yhat = self.model(image)
                 yhat = activation(yhat)
@@ -191,7 +181,7 @@ class SatAdv(nn.Module):
                 image = image.permute(2, 0, 1).unsqueeze(0)
                 preds = self.model(image)
                 preds = activation(preds)
-                if preds.item() > 0.99:
+                if yhat.item() > 0.5:
                     correct_class = False
                     print("Adversarial attack successful!")
                     plt.imshow(image[0].permute(1,2,0).clone().detach().cpu().numpy())

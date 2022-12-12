@@ -22,10 +22,10 @@ class SatEvaluator():
         self.total_gt = torch.cat((gt, self.total_gt))
         
     def record_train_loss(self, train_loss):
-        self.train_losses.append(train_loss)
+        self.train_losses.append(train_loss.cpu())
         
     def record_test_loss(self, test_loss):
-        self.test_losses.append(test_loss)
+        self.test_losses.append(test_loss.cpu())
         
     def evaluate_accuracy(self):
         return accuracy_score(self.total_gt.cpu(), self.total_preds.cpu())
@@ -45,7 +45,7 @@ class SatEvaluator():
         plt.ylabel("Cross Entropy Loss")
         plt.title("Training loss")
         plt.subplot(212)
-        plt.plot(self.val_losses, 'b')
+        plt.plot(self.test_losses, 'b')
         plt.grid(True)
         plt.xlabel("Iteration number")
         plt.ylabel("Cross Entropy Loss")
@@ -71,4 +71,4 @@ class SatEvaluator():
         self.total_gt = torch.empty(size=(0, 1), device=self.device)
         
         self.train_losses = []
-        self.val_losses = []
+        self.test_losses = []

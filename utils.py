@@ -4,6 +4,7 @@ from torch import nn
 from matplotlib import pyplot as plt
 import torch
 from random import shuffle, uniform
+import torchvision.models as models
 
 import pdb
 
@@ -92,3 +93,30 @@ def sample_random_elev_azimuth(x_min, y_min, x_max, y_max, distance):
                 azimuth -= 180
     
     return (elevation, azimuth)
+
+def create_model(cfg, device='cuda'):
+    # Get the model name
+    model_name = cfg.MODEL_NAME
+    
+    # Initialize the model
+    if model_name == 'resnet101':
+        print("Initializing a ResNet-101 model.")
+        model = models.resnet101(pretrained=True)
+        model.fc = torch.nn.Linear(2048, 1, device=device, dtype=torch.float32)
+    elif model_name == 'vgg16':
+        print("Initializing a VGG-16 model.")
+        model = models.vgg16(pretrained=True)
+        model.classifier[6] = torch.nn.Linear(4096, 1, device=device, dtype=torch.float32)
+    else:
+        raise NotImplementedError
+    
+    # Load model weights
+    if cfg.MODEL_WEIGHTS:
+        print(f"Loading model weights from {cfg.MODEL_WEIGHTS}")
+        model.load_state_dict(torch.load(cfg.MODEL_WEIGHTS))
+    
+    # Move the model to the device
+    model.to(device)
+    
+    return model
+    
