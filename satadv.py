@@ -90,14 +90,14 @@ class SatAdv(nn.Module):
                         # Render and save the image
                         synthetic_image = self.renderer.render(
                             mesh, 
-                            image,
-                            distance, 
+                            image, 
                             elevation, 
                             azimuth,
                             lights_direction,
                             scaling_factor=scaling_factor,
                             intensity=intensity,
-                            ambient_color=((0.05, 0.05, 0.05),)
+                            ambient_color=((0.05, 0.05, 0.05),),
+                            distance=distance
                         )
                         save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, dataset_type, "positive", f"image_{positive_counter}.png")
                         save_image(synthetic_image.permute(2, 0, 1), save_dir)
