@@ -202,16 +202,22 @@ class SatAdv(nn.Module):
         xyz = torch.tensor([x, y, z], device=self.device).unsqueeze(0)
         return xyz
     
-    def find_failure_regions(self, mesh, background_image, elevs, azims, resolution=100):
+    def find_failure_regions(self, mesh, background_image, elevs, azims, resolution=100, intensity=1.0):
+        """
+        elevs and azims represent lighting directions.
+        """
         # Generate randomized parameters for this particular rendering (all except the tested one)
-        elevation, azimuth = sample_random_elev_azimuth(-1.287, -1.287, 1.287, 1.287, 5.0)
+        elevation, azimuth = sample_random_elev_azimuth(-1.287, -1.287, 1.287, 1.287, 5.0) # Camera elevation and azimuth
         scaling_factor = random.uniform(0.70, 0.80)
+        # elevation = 70
+        # azimuth = 0
+        # scaling_factor = 0.75
         
         # Plot an image sample
-        with torch.no_grad():
-            plt.imshow(self.renderer.render(mesh, background_image, lights_direction=((0, -1, 0),), elevation=elevation, azimuth=azimuth, scaling_factor=scaling_factor, intensity=1.0).clone().detach().cpu().numpy())
-            plt.savefig("results/image_sample.jpg")
-            plt.close('all')
+        # with torch.no_grad():
+        #     plt.imshow(self.renderer.render(mesh, background_image, lights_direction=((0, -1, 0),), elevation=elevation, azimuth=azimuth, scaling_factor=scaling_factor, intensity=1.0).clone().detach().cpu().numpy())
+        #     plt.savefig("results/image_sample.jpg")
+        #     plt.close('all')
         
         # Create the activation function
         activation = nn.Sigmoid()
@@ -227,7 +233,7 @@ class SatAdv(nn.Module):
                 j = 0
                 for azim in azims:
                     lights_direction = self.get_lightdir_from_elaz(elev, azim)
-                    rendered_image = self.renderer.render(mesh, background_image, lights_direction=lights_direction, elevation=elevation, azimuth=azimuth, scaling_factor=scaling_factor, intensity=1.0)
+                    rendered_image = self.renderer.render(mesh, background_image, lights_direction=lights_direction, elevation=elevation, azimuth=azimuth, scaling_factor=scaling_factor, intensity=intensity)
                     rendered_image = rendered_image.permute(2, 0, 1).unsqueeze(0).float()
 
                     # Run inference on the image
@@ -241,14 +247,14 @@ class SatAdv(nn.Module):
                     j += 1
                 i += 1
         
-        # Plot the heatmap
-        plt.imshow(correctness_heatmap, cmap='Blues')
-        plt.savefig("results/test.jpg")
-        plt.close('all')
+        # # Plot the heatmap
+        # plt.imshow(correctness_heatmap, cmap='Blues')
+        # plt.savefig("results/test.jpg")
+        # plt.close('all')
         
         return correctness_heatmap
     
-    def failure_analysis(self, data_set, resolution=100, n_samples=100, plot=True):
+    def failure_analysis(self, data_set, resolution=100, n_samples=100, plot=True, intensity=1.0):
         # Initialize the dataset correctness tensor
         dataset_correctness = torch.empty(size=(0, resolution, resolution), device=self.device)
         
@@ -266,7 +272,7 @@ class SatAdv(nn.Module):
             if label == 1: # take only empty images
                 print(f"Sample: {samples_count + 1}")
                 mesh = random.choice(self.meshes)
-                correctness_image = self.find_failure_regions(mesh, image, elevs, azims, resolution=resolution)
+                correctness_image = self.find_failure_regions(mesh, image, elevs, azims, resolution=resolution, intensity=intensity)
                 correctness_image = correctness_image.to(self.device)
                 dataset_correctness = torch.cat((dataset_correctness, correctness_image.unsqueeze(0)))
                 samples_count += 1
@@ -277,12 +283,12 @@ class SatAdv(nn.Module):
         
         # Plot the heatmap
         if plot:
-            plt.figure(figsize=(12.8, 9.6))
             plt.close('all')
-            heatmap = sn.heatmap(average_correctness.cpu(), xticklabels=azims.astype(np.int), yticklabels=elevs.astype(np.int))
+            plt.figure(figsize=(12.8, 9.6))
+            heatmap = sn.heatmap(average_correctness.cpu(), vmin=0.0, vmax=1.0, xticklabels=azims.astype(np.int), yticklabels=elevs.astype(np.int))
             plt.xlabel("Azimuth")
             plt.ylabel("Elevation")
-            plt.title("Average data correctness for different angles")
+            plt.title("Average data correctness")
             plt.savefig(os.path.join(self.cfg.RESULTS_DIR, "correctness_heatmap.jpg"))
             plt.close('all')
         

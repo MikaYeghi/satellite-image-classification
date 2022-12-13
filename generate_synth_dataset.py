@@ -32,7 +32,6 @@ samples = extract_samples(test_set, 1, 3)
 #     print(f"Sample {k}, label {sample[1]}")
 #     k += 1
 
-
 """Initialize the adversarial attacker"""
 adv_net = SatAdv(cfg)
 
@@ -49,7 +48,7 @@ background_image = samples[0][0].clone()
 """Attack an image"""
 # adv_net.attack_image_mesh(mesh, background_image)
 # adv_net.find_failure_regions(mesh, background_image, resolution=50)
-adv_net.failure_analysis(test_set, resolution=10, n_samples=10)
+adv_net.failure_analysis(test_set, resolution=50, n_samples=100, intensity=1.0)
 
 """Generate synthetic dataset"""
 # adv_net.generate_synthetic_dataset(train_set, test_set)
