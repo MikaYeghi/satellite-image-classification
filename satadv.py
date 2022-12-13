@@ -51,7 +51,7 @@ class SatAdv(nn.Module):
         print(f"Loading meshes from {self.cfg.MESHES_DIR}")
         meshes = []
         obj_paths = glob.glob(self.cfg.MESHES_DIR + "/*.obj")
-        for obj_path in obj_paths:
+        for obj_path in tqdm(obj_paths):
             mesh = load_objs_as_meshes([obj_path], device=self.device)[0]
             meshes.append(mesh)
         if shuffle:
@@ -107,8 +107,8 @@ class SatAdv(nn.Module):
                         save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, dataset_type, "positive", f"image_{positive_counter}.png")
                         save_image(synthetic_image.permute(2, 0, 1), save_dir)
                         positive_counter += 1
-            if positive_counter >= 1000:
-                break
+            # if positive_counter >= 1000:
+            #     break
         print(f"Generated {positive_counter} positive images and {negative_counter} negative images for the training set.")
     
     def generate_synthetic_dataset(self, train_set, test_set):
