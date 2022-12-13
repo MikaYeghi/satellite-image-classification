@@ -49,6 +49,7 @@ background_image = samples[0][0].clone()
 """Attack an image"""
 # adv_net.attack_image_mesh(mesh, background_image)
 # adv_net.find_failure_regions(mesh, background_image, resolution=50)
+adv_net.failure_analysis(test_set, resolution=10, n_samples=10)
 
 """Generate synthetic dataset"""
-adv_net.generate_synthetic_dataset(train_set, test_set)
+# adv_net.generate_synthetic_dataset(train_set, test_set)
