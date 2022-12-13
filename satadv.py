@@ -73,21 +73,21 @@ class SatAdv(nn.Module):
         negative_counter = 0
         for image, label in tqdm(dataset):
             if label == 1: # select only negative samples, i.e. without real cars
+                negative_recorded = False
                 for mesh in meshes: # place each vehicle in the image
                     random_number = random.uniform(0, 1)
-                    if random_number > 0.5:
+                    if random_number > 0.5 and not negative_recorded:
                         # Negative class (i.e. background)
                         synthetic_image = image
                         save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, dataset_type, "negative", f"image_{negative_counter}.png")
                         save_image(synthetic_image, save_dir)
                         negative_counter += 1
-                        # TODO: need to add either "continue" or "break" here. Currently some negative images are repeated
+                        negative_recorded = True
                     else:
                         # Positive class (i.e. with vehicle)
-                        
-                        # Generate randomized parameters for rendering
+                        # The numbers were selected to make sure that the elevation is above 70 degrees
                         distance = 5.0
-                        elevation, azimuth = sample_random_elev_azimuth(-1.287, -1.287, 1.287, 1.287, 5.0) # The numbers were selected to make sure that the elevation is above 70 degrees
+                        elevation, azimuth = sample_random_elev_azimuth(-1.287, -1.287, 1.287, 1.287, 5.0) 
                         lights_direction = torch.tensor([random.uniform(-1, 1),-1.0,random.uniform(-1, 1)], device=self.device, requires_grad=True).unsqueeze(0)
                         scaling_factor = random.uniform(0.70, 0.80)
                         intensity = random.uniform(0.0, 1.0)

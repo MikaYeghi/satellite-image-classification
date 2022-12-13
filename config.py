@@ -29,4 +29,5 @@ BRIGHTNESS_LEVELS = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
 MESHES_DIR = "/home/myeghiaz/Storage/GAN-vehicles"
 SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-0.125m-50px-proba"
 ATTACK_LR = 0.05
+APPLY_TRAIN_TRANSFORMS = False
 MODEL_NAME = 'vgg16'
