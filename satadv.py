@@ -291,16 +291,27 @@ class SatAdv(nn.Module):
                 pass
 
         average_correctness = dataset_correctness.mean(dim=0)
+        std_correctness = dataset_correctness.std(dim=0)
+        
+        # Save the heatmaps tensor (all heatmaps)
+        torch.save(dataset_correctness, os.path.join(self.cfg.RESULTS_DIR, f"tensor_{self.cfg.HEATMAP_NAME}.pt"))
         
         # Plot the heatmap
         if plot:
             plt.close('all')
             plt.figure(figsize=(12.8, 9.6))
-            heatmap = sn.heatmap(average_correctness.cpu(), vmin=0.0, vmax=1.0, xticklabels=azims.astype(np.int), yticklabels=elevs.astype(np.int))
+            heatmap = sn.heatmap(average_correctness.cpu(), xticklabels=azims.astype(np.int), yticklabels=elevs.astype(np.int))
             plt.xlabel("Azimuth")
             plt.ylabel("Elevation")
             plt.title("Average data correctness")
-            plt.savefig(os.path.join(self.cfg.RESULTS_DIR, "correctness_heatmap.jpg"))
+            plt.savefig(os.path.join(self.cfg.RESULTS_DIR, f"mean_{self.cfg.HEATMAP_NAME}.jpg"))
+            plt.close('all')
+            plt.figure(figsize=(12.8, 9.6))
+            heatmap = sn.heatmap(std_correctness.cpu(), xticklabels=azims.astype(np.int), yticklabels=elevs.astype(np.int))
+            plt.xlabel("Azimuth")
+            plt.ylabel("Elevation")
+            plt.title("Standard deviation of data correctness")
+            plt.savefig(os.path.join(self.cfg.RESULTS_DIR, f"std_{self.cfg.HEATMAP_NAME}.jpg"))
             plt.close('all')
         
         return average_correctness

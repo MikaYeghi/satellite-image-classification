@@ -34,3 +34,4 @@ SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-0.125m-50px-dive
 ATTACK_LR = 0.05
 APPLY_TRAIN_TRANSFORMS = True
 MODEL_NAME = 'vgg16'
+HEATMAP_NAME = "corr_heatmap"
