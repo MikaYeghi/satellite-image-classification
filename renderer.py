@@ -33,7 +33,6 @@ class Renderer(nn.Module):
     def __init__(self, device):
         super().__init__()
         self.avg_pool = nn.AvgPool2d(5, stride=5)
-        
         self.device = device
     
     def render(self, mesh, background_image, elevation, azimuth, lights_direction, distance=5.0, 

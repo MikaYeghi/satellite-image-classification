@@ -116,7 +116,7 @@ class SatelliteDataset(Dataset):
                 negatives.append(data)
             else:
                 raise NotImplementedError
-        return (positives, negatives)
+        return (positives.copy(), negatives.copy())
     
     def get_posneg_count(self):
         total_pos = 0

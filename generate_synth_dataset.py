@@ -16,8 +16,8 @@ import pdb
 transforms = SatTransforms()
 train_transform = transforms.get_train_transforms()
 test_transform = transforms.get_test_transforms()
-train_set = SatelliteDataset(cfg.TRAIN_PATH, transform=train_transform, device=device)
-test_set = SatelliteDataset(cfg.TEST_PATH, transform=test_transform, device=device)
+train_set = SatelliteDataset(cfg.TRAIN_PATH, transform=train_transform, shuffle=True, device=device)
+test_set = SatelliteDataset(cfg.TEST_PATH, transform=test_transform, shuffle=True, device=device)
 
 """Extract samples of background"""
 samples = extract_samples(test_set, 1, 3)
@@ -48,7 +48,7 @@ background_image = samples[0][0].clone()
 """Attack an image"""
 # adv_net.attack_image_mesh(mesh, background_image)
 # adv_net.find_failure_regions(mesh, background_image, resolution=50)
-adv_net.failure_analysis(test_set, resolution=50, n_samples=100, intensity=1.0)
+# adv_net.failure_analysis(test_set, resolution=50, n_samples=100, intensity=1.0)
 
 """Generate synthetic dataset"""
-# adv_net.generate_synthetic_dataset(train_set, test_set)
+adv_net.generate_synthetic_dataset(train_set, test_set)
