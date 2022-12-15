@@ -246,7 +246,11 @@ class SatAdv(nn.Module):
                     lights_direction = self.get_lightdir_from_elaz(elev, azim)
                     rendered_image = self.renderer.render(mesh, background_image, lights_direction=lights_direction, elevation=elevation, azimuth=azimuth, scaling_factor=scaling_factor, intensity=intensity)
                     rendered_image = rendered_image.permute(2, 0, 1).unsqueeze(0).float()
-
+                    
+                    # Save the rendered image
+                    if self.cfg.VISUALIZE_HEATMAP_SAMPLES:
+                        save_image(rendered_image[0], f"results/image_{i}_{j}.jpg")
+                    
                     # Run inference on the image
                     self.model.eval()
                     prediction = activation(self.model(rendered_image)).item()
@@ -303,7 +307,7 @@ class SatAdv(nn.Module):
             heatmap = sn.heatmap(average_correctness.cpu(), xticklabels=azims.astype(np.int), yticklabels=elevs.astype(np.int))
             plt.xlabel("Azimuth")
             plt.ylabel("Elevation")
-            plt.title("Average data correctness")
+            plt.title(f"Average probability for different light directions with intensity level {intensity}")
             plt.savefig(os.path.join(self.cfg.RESULTS_DIR, f"mean_{self.cfg.HEATMAP_NAME}.jpg"))
             plt.close('all')
             plt.figure(figsize=(12.8, 9.6))

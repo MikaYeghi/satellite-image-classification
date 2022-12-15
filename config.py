@@ -1,4 +1,4 @@
-DATASET_NAME = "synthetic-diversified-2"
+DATASET_NAME = "real"
 if DATASET_NAME == "real":
     TRAIN_PATH = "/home/myeghiaz/Storage/SatClass-Real-0.125m-50px/train"
     TEST_PATH = "/home/myeghiaz/Storage/SatClass-Real-0.125m-50px/test"
@@ -30,8 +30,9 @@ RESULTS_DIR = "results/"
 EVAL_ONLY = True
 BRIGHTNESS_LEVELS = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
 MESHES_DIR = "/home/myeghiaz/Storage/GAN-vehicles-1000"
-SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-0.125m-50px-diversified-2"
+SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-0.125m-50px-proba"
 ATTACK_LR = 0.05
 APPLY_TRAIN_TRANSFORMS = True
 MODEL_NAME = 'vgg16'
-HEATMAP_NAME = "corr_heatmap"
+HEATMAP_NAME = "corr_heatmap30"
+VISUALIZE_HEATMAP_SAMPLES = False
