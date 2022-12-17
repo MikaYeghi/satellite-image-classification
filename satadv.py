@@ -246,19 +246,19 @@ class SatAdv(nn.Module):
                     lights_direction = self.get_lightdir_from_elaz(elev, azim)
                     rendered_image = self.renderer.render(mesh, background_image, lights_direction=lights_direction, elevation=elevation, azimuth=azimuth, scaling_factor=scaling_factor, intensity=intensity)
                     rendered_image = rendered_image.permute(2, 0, 1).unsqueeze(0).float()
-                    
+
                     # Save the rendered image
                     if self.cfg.VISUALIZE_HEATMAP_SAMPLES:
                         save_image(rendered_image[0], f"results/image_{i}_{j}.jpg")
-                    
+
                     # Run inference on the image
                     self.model.eval()
                     prediction = activation(self.model(rendered_image)).item()
-                    
+
                     # Update the heatmap
                     heatmap_pixel = 1 - prediction # Correct class is 0, hence invert
                     correctness_heatmap[i][j] = heatmap_pixel
-                    
+
                     j += 1
                 i += 1
         
