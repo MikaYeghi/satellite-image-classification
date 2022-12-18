@@ -1,10 +1,13 @@
 import os
+import glob
 import math
 from torch import nn
 from matplotlib import pyplot as plt
 import torch
 from random import shuffle, uniform
 import torchvision.models as models
+from tqdm import tqdm
+from pytorch3d.io import load_objs_as_meshes
 
 import pdb
 
@@ -120,3 +123,51 @@ def create_model(cfg, device='cuda'):
     
     return model
     
+def load_meshes(cfg, shuffle_=True, device='cuda'):
+    print(f"Loading meshes from {cfg.MESHES_DIR}")
+    meshes = []
+    obj_paths = glob.glob(cfg.MESHES_DIR + "/*.obj")
+    for obj_path in tqdm(obj_paths):
+        mesh = load_objs_as_meshes([obj_path], device=device)[0]
+        meshes.append(mesh)
+    if shuffle_:
+        shuffle(meshes)
+    return meshes    
+
+def get_lightdir_from_elaz(elev, azim, device='cuda'):
+    x = -math.cos(math.radians(elev)) * math.sin(math.radians(azim))
+    y = -math.sin(math.radians(elev))
+    z = -math.cos(math.radians(elev)) * math.cos(math.radians(azim))
+    xyz = torch.tensor([x, y, z], device=device).unsqueeze(0)
+    return xyz
+
+def generate_render_params(background_image, mesh, device='cuda'):
+    # Camera pose
+    distance = torch.tensor(5.0, device=device)
+    elevation, azimuth = sample_random_elev_azimuth(-1.287, -1.287, 1.287, 1.287, 5.0)
+    scaling_factor = torch.tensor(uniform(0.70, 0.80), device=device)
+    elevation = torch.tensor(elevation, device=device)
+    azimuth = torch.tensor(azimuth, device=device)
+    
+    # Lights direction and intensity
+    lights_direction = torch.tensor(
+        get_lightdir_from_elaz(elev=uniform(0, 90), azim=uniform(-180, 180), device=device),
+        device=device
+    )
+    intensity = torch.tensor(uniform(0.1, 2.0), device=device)
+    ambient_color = torch.tensor(((0.05, 0.05, 0.05),), device=device)
+    
+    # Collect in a dict
+    rendering_params = {
+        "mesh": mesh,
+        "background_image": background_image,
+        "distance": distance,
+        "elevation": elevation,
+        "azimuth": azimuth,
+        "scaling_factor": scaling_factor,
+        "lights_direction": lights_direction,
+        "intensity": intensity,
+        "ambient_color": ambient_color
+    }
+
+    return rendering_params

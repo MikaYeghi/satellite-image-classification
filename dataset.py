@@ -101,6 +101,14 @@ class SatelliteDataset(Dataset):
         negatives = random.sample(negatives, keep_count)
         self.build_metadata_from_posneg(positives, negatives)
     
+    def remove_positives(self):
+        _, negatives = self.get_posneg()
+        self.build_metadata_from_posneg([], negatives)
+    
+    def remove_negatives(self):
+        positives, _ = self.get_posneg()
+        self.build_metadata_from_posneg(positives, [])
+    
     def build_metadata_from_posneg(self, positives, negatives):
         metadata = positives + negatives
         random.shuffle(metadata)
