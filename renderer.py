@@ -40,11 +40,12 @@ class Renderer(nn.Module):
         transform = tv_transf.Resize((250, 250))
         background_image = transform(background_image).permute(1, 2, 0)
         R, T = look_at_view_transform(dist=distance, elev=elevation, azim=azimuth)
+        scale_xyz = scaling_factor * torch.tensor([1.0, 1.0, 1.0], device=self.device).unsqueeze(0)
         cameras = FoVOrthographicCameras(
             device=self.device, 
             R=R, 
             T=T, 
-            scale_xyz=((scaling_factor, scaling_factor, scaling_factor),)
+            scale_xyz=scale_xyz
         )
         
         raster_settings = RasterizationSettings(

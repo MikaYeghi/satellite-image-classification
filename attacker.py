@@ -1,31 +1,46 @@
+import os
 import torch
+import torchvision
+from tqdm import tqdm
 from torch import nn
 from torch.nn import BCELoss
 from torchvision.utils import save_image
+from pathlib import Path
 
 from renderer import Renderer
 
 import pdb
 
 class FGSMAttacker:
-    def __init__(self, model, attacked_params, epsilon=1e-3, device='cuda'):
+    def __init__(self, model, attacked_params, save_dir, epsilon=1e-3, device='cuda'):
         self.model = model
         self.attacked_params = attacked_params
         self.epsilon = epsilon
         self.device = device
         self.renderer = Renderer(device=device)
         
-        # TO DO: NEED A LIST OF ORIGINAL AND ADVERSARIAL EXAMPLES
+        # Create the save directories
+        self.save_dir = save_dir
+        Path(os.path.join(save_dir, "original")).mkdir(parents=True, exist_ok=True)
+        Path(os.path.join(save_dir, "adversarial")).mkdir(parents=True, exist_ok=True)
+        
+        # torch.Tensor to PIL.Image converter
+        self.converter = torchvision.transforms.ToPILImage()
+        
+        # List which stored AttackedImage variables
+        self.adversarial_examples_list = []
         
         # Set up the model
         self.activation = nn.Sigmoid() # Need this to apply to the model output
         self.loss_fn = BCELoss()
     
-    def attack_single_image(self, rendering_params, true_label=0):
+    def attack_single_image(self, attacked_image, true_label=0):
         # Set the model to eval mode following the PyTorch tutorial for adversarial attacks
         self.model.eval()
+        self.model.zero_grad()
         
         # Set up parameters which require gradients for this attack
+        rendering_params = attacked_image.get_rendering_params()
         rendering_params = self.select_attacked_params(rendering_params, self.attacked_params)
         
         # Attack the image
@@ -44,17 +59,23 @@ class FGSMAttacker:
                 ambient_color=rendering_params['ambient_color']
             ).permute(2, 0, 1).unsqueeze(0)
             if k == 0:
-                save_image(image, "results/image_initial.jpg")
+                # save_image(image, f"results/image_original_{len(self.adversarial_examples_list)}.jpg")
+                attacked_image.set_original_image(image[0])
             
             # Run prediction on the image
             pred = self.activation(self.model(image))
-            print(f"Prediction confidence: {pred.item()}")
             
             # If the class is incorrect, then stop. Otherwise, perform a single attack step
             if (pred > 0.5).int().item() != true_label:
-                save_image(image, "results/image_final.jpg")
+                # print(f"Prediction confidence: {pred.item()}")
+                # save_image(image, f"results/image_final_{len(self.adversarial_examples_list)}.jpg")
+                attacked_image.set_adversarial_image(image[0])
+                attacked_image.set_adversarial_params(rendering_params)
+                self.adversarial_examples_list.append(attacked_image)
                 break
             else:
+                # if k % 10 == 0:
+                #     print(f"Prediction confidence: {pred.item()}")
                 # Calculate the loss
                 label_batched = torch.tensor([true_label], device=self.device, dtype=torch.float).unsqueeze(0)
                 loss = self.loss_fn(pred, label_batched)
@@ -97,5 +118,30 @@ class FGSMAttacker:
                 rendering_params[param].grad.zero_()
     
     def __str__(self):
-        text = f"Epsilon: {self.epsilon}.\nDevice: {self.device}."
+        text = f"Epsilon: {self.epsilon}.\nDevice: {self.device}.\nAttacked parameters: {self.attacked_params}.\nNumber of correct-adversarial pairs: {len(self.adversarial_examples_list)}."
         return text
+    
+    def save(self):
+        print(f"Saving correct-adversarial image pairs to {self.save_dir}")
+        idx = 0
+        for attacked_image in self.adversarial_examples_list:
+            # Retrieve the original and final images
+            original_image = attacked_image.get_original_image()
+            adversarial_image = attacked_image.get_adversarial_image()
+            
+            # Save each image to the relevant folder
+            original_save_path = os.path.join(self.save_dir, "original", f"image_{idx}.jpg")
+            adversarial_save_path = os.path.join(self.save_dir, "adversarial", f"image_{idx}.jpg")
+            
+            # Convert the images to PIL
+            original_image = self.converter(original_image)
+            adversarial_image = self.converter(adversarial_image)
+            
+            # Save the images with high quality
+            original_image.save(original_save_path, quality=95)
+            adversarial_image.save(adversarial_save_path, quality=95)
+            
+            idx += 1
+            
+    def get_num_pairs(self):
+        return len(self.adversarial_examples_list)
