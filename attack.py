@@ -31,7 +31,7 @@ print(attacker)
 
 """Loop through all possible negative samples"""
 idx = 0
-t = tqdm(train_set, desc=f"Index: #{idx}")
+t = tqdm(train_set, desc="Pairs: 0")
 for background_image, label in tqdm(train_set):
     # Randomly select 1 mesh
     mesh = random.choice(meshes)
@@ -42,6 +42,10 @@ for background_image, label in tqdm(train_set):
     # Generate the adversarial example
     attacker.attack_single_image(attacked_image)
     
-    t.set_description(f"Index: #{idx}. Pairs: {attacker.get_num_pairs()}")
+    t.set_description(f"Pairs: {attacker.get_num_pairs()}")
+    
+    if attacker.get_num_pairs() >= 10000:
+        break
+    idx += 1
 
 attacker.save()
