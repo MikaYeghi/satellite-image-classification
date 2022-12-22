@@ -44,7 +44,7 @@ for background_image, label in tqdm(train_set):
     
     t.set_description(f"Pairs: {attacker.get_num_pairs()}")
     
-    if attacker.get_num_pairs() >= 10000:
+    if attacker.get_num_pairs() >= cfg.NUM_ADV_IMGS:
         break
     idx += 1
 

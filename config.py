@@ -44,3 +44,4 @@ HEATMAP_NAME = "corr_heatmap"
 VISUALIZE_HEATMAP_SAMPLES = True
 ATTACKED_PARAMS = ['background_image']
 ADVERSARIAL_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Adversarial-0.125m-50px"
+NUM_ADV_IMGS = 100
