@@ -43,5 +43,5 @@ MODEL_NAME = 'vgg16'
 HEATMAP_NAME = "corr_heatmap"
 VISUALIZE_HEATMAP_SAMPLES = True
 ATTACKED_PARAMS = ['textures']
-ADVERSARIAL_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Adversarial-0.125m-50px"
-NUM_ADV_IMGS = 1000
+ADVERSARIAL_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Adversarial-0.125m-50px-proba"
+NUM_ADV_IMGS = 1

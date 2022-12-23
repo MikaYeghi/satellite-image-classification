@@ -3,11 +3,11 @@ import torch
 import torchvision
 from tqdm import tqdm
 from torch import nn
-from torch.nn import BCELoss
 from torchvision.utils import save_image
 from pathlib import Path
 
 from renderer import Renderer
+from losses import BCELoss, ColorForce, BCEColor
 
 import pdb
 
@@ -63,6 +63,7 @@ class FGSMAttacker:
             
             # Run prediction on the image
             pred = self.activation(self.model(image))
+            print(pred.item())
             
             # If the class is incorrect, then stop. Otherwise, perform a single attack step
             if (pred > 0.5).int().item() != true_label:
