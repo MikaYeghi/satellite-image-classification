@@ -19,10 +19,7 @@ class AttackedImage:
         azimuth = torch.tensor(azimuth, device=self.device)
 
         # Lights direction and intensity
-        lights_direction = torch.tensor(
-            get_lightdir_from_elaz(elev=uniform(0, 90), azim=uniform(-180, 180), device=self.device),
-            device=self.device
-        )
+        lights_direction = get_lightdir_from_elaz(elev=uniform(0, 90), azim=uniform(-180, 180), device=self.device).clone()
         intensity = torch.tensor(uniform(0.1, 2.0), device=self.device)
         ambient_color = torch.tensor(((0.05, 0.05, 0.05),), device=self.device)
 
