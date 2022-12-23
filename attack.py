@@ -1,6 +1,7 @@
 import random
 import torch
 from tqdm import tqdm
+from pytorch3d.renderer import TexturesUV
 
 from dataset import SatelliteDataset
 from attacker import FGSMAttacker

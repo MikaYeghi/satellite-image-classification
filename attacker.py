@@ -59,7 +59,6 @@ class FGSMAttacker:
                 ambient_color=rendering_params['ambient_color']
             ).permute(2, 0, 1).unsqueeze(0)
             if k == 0:
-                # save_image(image, f"results/image_original_{len(self.adversarial_examples_list)}.jpg")
                 attacked_image.set_original_image(image[0])
             
             # Run prediction on the image
@@ -67,15 +66,11 @@ class FGSMAttacker:
             
             # If the class is incorrect, then stop. Otherwise, perform a single attack step
             if (pred > 0.5).int().item() != true_label:
-                # print(f"Prediction confidence: {pred.item()}")
-                # save_image(image, f"results/image_final_{len(self.adversarial_examples_list)}.jpg")
                 attacked_image.set_adversarial_image(image[0])
                 attacked_image.set_adversarial_params(rendering_params)
                 self.adversarial_examples_list.append(attacked_image)
                 break
             else:
-                # if k % 10 == 0:
-                #     print(f"Prediction confidence: {pred.item()}")
                 # Calculate the loss
                 label_batched = torch.tensor([true_label], device=self.device, dtype=torch.float).unsqueeze(0)
                 loss = self.loss_fn(pred, label_batched)
@@ -91,8 +86,17 @@ class FGSMAttacker:
             k += 1
             
     def fgsm_attack(self, rendering_params):
-        for param in rendering_params:
-            if param in self.attacked_params:
+        for param in self.attacked_params:
+            if param == 'textures':
+                # Collect the element-wise sign of the data gradient
+                sign_grad = rendering_params['mesh'].textures.maps_padded().grad.data.sign()
+                
+                # Perturb the data
+                rendering_params['mesh'].textures.maps_padded().data = rendering_params['mesh'].textures.maps_padded().data + self.epsilon * sign_grad
+            elif attacked_param == 'mesh':
+                # TODO: make everything related to the mesh (textures, vertices) differentiable
+                raise NotImplementedError
+            elif param in rendering_params:
                 # Collect the element-wise sign of the data gradient
                 sign_grad = rendering_params[param].grad.data.sign()
                 
@@ -102,19 +106,29 @@ class FGSMAttacker:
         return rendering_params
     
     def select_attacked_params(self, rendering_params, attacked_params):
-        for param in rendering_params:
-            if param in attacked_params:
-                # NEED AN ANTIDURAK FOR MESH
-                rendering_params[param].requires_grad = True
-                rendering_params[param].retain_grad()
+        for attacked_param in attacked_params:
+            if attacked_param == 'textures':
+                for i in range(len(rendering_params['mesh'].textures.maps_list())):
+                    rendering_params['mesh'].textures.maps_padded().requires_grad = True
+                    # rendering_params['mesh'].textures.maps_padded().retain_grad()
+                pass
+            elif attacked_param == 'mesh':
+                # TODO: make everything related to the mesh (textures, vertices) differentiable
+                raise NotImplementedError
+            elif attacked_param in rendering_params:
+                rendering_params[attacked_param].requires_grad = True
 
         return rendering_params
     
     def zero_gradients(self, rendering_params):
         self.model.zero_grad()
         
-        for param in rendering_params:
-            if param in self.attacked_params:
+        for param in self.attacked_params:
+            if param == 'textures':
+                rendering_params['mesh'].textures.maps_padded().grad.zero_()
+            elif param == 'mesh':
+                raise NotImplementedError
+            elif param in self.rendering_params:
                 rendering_params[param].grad.zero_()
     
     def __str__(self):
