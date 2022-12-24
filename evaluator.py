@@ -1,6 +1,8 @@
 import torch
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 from matplotlib import pyplot as plt
+from torchvision.utils import save_image
+from pathlib import Path
 import pandas as pd
 import seaborn as sn
 import os
@@ -16,6 +18,14 @@ class SatEvaluator():
         
         self.train_losses = []
         self.test_losses = []
+        
+        # FP-FN analysis
+        self.FP_counter = 0
+        self.FN_counter = 0
+        self.FP_save_dir = os.path.join(results_dir, "fp-fn-analysis", "FP")
+        self.FN_save_dir = os.path.join(results_dir, "fp-fn-analysis", "FN")
+        Path(self.FP_save_dir).mkdir(parents=True, exist_ok=True) # create the directory if necessary
+        Path(self.FN_save_dir).mkdir(parents=True, exist_ok=True) # create the directory if necessary
     
     def record_preds_gt(self, preds, gt):
         self.total_preds = torch.cat((preds, self.total_preds))
@@ -76,3 +86,17 @@ class SatEvaluator():
         
         self.train_losses = []
         self.test_losses = []
+        
+    def save_FP_FN(self, preds, labels_batch, images_batch):
+        # Save FP and FN images
+        for i in range(len(preds)):
+            if preds[i] == 0 and labels_batch[i] == 1:
+                # FP
+                img = images_batch[i]
+                save_image(img, os.path.join(self.FP_save_dir, f"image_{self.FP_counter}.jpg"))
+                self.FP_counter += 1
+            elif preds[i] == 1 and labels_batch[i] == 0:
+                # FN
+                img = images_batch[i]
+                save_image(img, os.path.join(self.FN_save_dir, f"image_{self.FN_counter}.jpg"))
+                self.FN_counter += 1

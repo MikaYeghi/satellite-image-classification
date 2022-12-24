@@ -98,6 +98,10 @@ with torch.no_grad():
         
         # Convert to labels
         preds = (preds > 0.5).float()
+        
+        # Save FP-FN if needed
+        if cfg.FP_FN_analysis:
+            evaluator.save_FP_FN(preds, labels_batch, images_batch)
 
         # Record the predictions
         evaluator.record_preds_gt(preds, labels_batch)
