@@ -6,11 +6,11 @@ from utils import sample_random_elev_azimuth, get_lightdir_from_elaz
 class AttackedImage:
     def __init__(self, background_image, mesh, device='cuda'):
         self.device = device
-        self.rendering_params = self.generate_render_params(background_image, mesh)
+        self.rendering_params = self.generate_rendering_params(background_image, mesh)
         self.original_image = None
         self.adversarial_image = None
         
-    def generate_render_params(self, background_image, mesh):
+    def generate_rendering_params(self, background_image, mesh):
         # Camera pose
         distance = torch.tensor(5.0, device=self.device)
         elevation, azimuth = sample_random_elev_azimuth(-1.287, -1.287, 1.287, 1.287, 5.0)
@@ -44,7 +44,7 @@ class AttackedImage:
     def set_adversarial_image(self, image):
         self.adversarial_image = image.clone().cpu()
         
-    def set_adversarial_params(self, rendering_params):
+    def set_rendering_params(self, rendering_params):
         self.rendering_params = rendering_params
     
     def get_original_image(self):
@@ -55,3 +55,9 @@ class AttackedImage:
     
     def get_rendering_params(self):
         return self.rendering_params
+    
+    def get_background_image(self):
+        return self.rendering_params['background_image']
+    
+    def get_mesh(self):
+        return self.rendering_params['mesh']

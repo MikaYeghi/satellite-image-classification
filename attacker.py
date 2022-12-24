@@ -63,12 +63,11 @@ class FGSMAttacker:
             
             # Run prediction on the image
             pred = self.activation(self.model(image))
-            print(pred.item())
             
             # If the class is incorrect, then stop. Otherwise, perform a single attack step
             if (pred > 0.5).int().item() != true_label:
                 attacked_image.set_adversarial_image(image[0])
-                attacked_image.set_adversarial_params(rendering_params)
+                attacked_image.set_rendering_params(rendering_params)
                 self.adversarial_examples_list.append(attacked_image)
                 break
             else:
@@ -94,7 +93,7 @@ class FGSMAttacker:
                 
                 # Perturb the data
                 rendering_params['mesh'].textures.maps_padded().data = rendering_params['mesh'].textures.maps_padded().data + self.epsilon * sign_grad
-            elif attacked_param == 'mesh':
+            elif param == 'mesh':
                 # TODO: make everything related to the mesh (textures, vertices) differentiable
                 raise NotImplementedError
             elif param in rendering_params:
@@ -129,8 +128,77 @@ class FGSMAttacker:
                 rendering_params['mesh'].textures.maps_padded().grad.zero_()
             elif param == 'mesh':
                 raise NotImplementedError
-            elif param in self.rendering_params:
+            elif param in rendering_params:
                 rendering_params[param].grad.zero_()
+    
+    def EOT_attack_scene(self, attacked_image, true_label=0, N_transforms=10):
+        """
+        This function implements Expectation Over Transformation as described in "Synthesizing Robust Adversarial Examples".
+        Currently it is suited to optimizing with respect to background images and textures.
+        If one needs to implement other parameter attacks, this function needs to be modified.
+        """
+        # Set the model to eval mode following the PyTorch tutorial for adversarial attacks
+        self.model.eval()
+        self.model.zero_grad()
+        
+        # Sample transformations
+        rendering_params_list = [
+            attacked_image.generate_rendering_params(attacked_image.get_background_image(), attacked_image.get_mesh()) for _ in range(N_transforms)
+        ]
+        # Make attacked parameters trainable
+        rendering_params_list = [
+            self.select_attacked_params(rendering_params, self.attacked_params) for rendering_params in rendering_params_list
+        ]
+        
+        # Attack the scene
+        k = 0
+        while True:
+            loss = torch.tensor(0, device=self.device)
+            preds = []
+            for rendering_params in rendering_params_list:
+                # Render the image
+                image = self.renderer.render(
+                    mesh=rendering_params['mesh'],
+                    background_image=rendering_params['background_image'],
+                    elevation=rendering_params['elevation'],
+                    azimuth=rendering_params['azimuth'],
+                    lights_direction=rendering_params['lights_direction'],
+                    distance=rendering_params['distance'],
+                    scaling_factor=rendering_params['scaling_factor'],
+                    intensity=rendering_params['intensity'],
+                    ambient_color=rendering_params['ambient_color']
+                ).permute(2, 0, 1).unsqueeze(0)
+                
+                # The if-statement below saves the last randomly sampled image
+                if k == 0:
+                    attacked_image.set_original_image(image[0])
+                
+                # Run prediction on the image
+                pred = self.activation(self.model(image))
+                preds.append(pred.item())
+                
+                # Compute the unit loss
+                label_batched = torch.tensor([true_label], device=self.device, dtype=torch.float).unsqueeze(0)
+                loss = loss + self.loss_fn(pred, label_batched)
+                
+            # Attack stops if the minimum prediction confidence goes beyond the threshold
+            # The if-statement below saves the last randomly sampled image with attacked parameters
+            if min(preds) > 0.5:
+                attacked_image.set_adversarial_image(image[0])
+                attacked_image.set_rendering_params(rendering_params)
+                self.adversarial_examples_list.append(attacked_image)
+                break
+
+            # Propagate the gradients
+            loss.backward()
+
+            # Call FGSM attack
+            rendering_params = self.fgsm_attack(rendering_params)
+
+            # Zero all gradients
+            self.zero_gradients(rendering_params)
+            
+            k += 1
     
     def __str__(self):
         text = f"Epsilon: {self.epsilon}.\nDevice: {self.device}.\nAttacked parameters: {self.attacked_params}.\nNumber of correct-adversarial pairs: {len(self.adversarial_examples_list)}."
