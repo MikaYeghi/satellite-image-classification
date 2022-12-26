@@ -12,8 +12,8 @@ elif DATASET_NAME == "synthetic-diversified-2":
     TRAIN_PATH = "/home/myeghiaz/Storage/SatClass-Synthetic-0.125m-50px-diversified-2/train"
     TEST_PATH = "/home/myeghiaz/Storage/SatClass-Synthetic-0.125m-50px-diversified-2/test"
 elif DATASET_NAME == "stan-non-centered":
-    TRAIN_PATH = "/home/myeghiaz/Storage/SatClass-Real-0.125m-50px/train"
-    TEST_PATH = "/home/myeghiaz/Storage/GSD:0.125m_sample-size:50_mean-sampling-freq:1"
+    TRAIN_PATH = "/home/myeghiaz/Storage/GSD-0.125m_sample-size-50/train"
+    TEST_PATH = "/home/myeghiaz/Storage/GSD-0.125m_sample-size-50/test"
 elif DATASET_NAME == "stan-with-shadows":
     TRAIN_PATH = "/home/myeghiaz/Storage/shadowless-shadow-dataset/with-shadows/train"
     TEST_PATH = "/home/myeghiaz/Storage/shadowless-shadow-dataset/with-shadows/test"
@@ -46,3 +46,8 @@ VISUALIZE_HEATMAP_SAMPLES = True
 ATTACKED_PARAMS = ['textures']
 ADVERSARIAL_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Adversarial-0.125m-50px-proba"
 NUM_ADV_IMGS = 1
+
+"""Generating a train-test dataset from raw dataset"""
+RAW_DATASET_DIR = "/var/storage/myeghiaz/GSD-0.125m_sample-size-50_mean-sampling-freq-1"
+RAW_DATASET_SAVE_DIR = "/var/storage/myeghiaz/GSD-0.125m_sample-size-50"
+TRAIN_TEST_SPLIT_RATIO = 0.8

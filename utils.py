@@ -1,6 +1,7 @@
 import os
 import glob
 import math
+import shutil
 from torch import nn
 from matplotlib import pyplot as plt
 import torch
@@ -8,6 +9,8 @@ from random import shuffle, uniform
 import torchvision.models as models
 from tqdm import tqdm
 from pytorch3d.io import load_objs_as_meshes
+from sklearn.model_selection import train_test_split
+from pathlib import Path
 
 import pdb
 
@@ -140,3 +143,75 @@ def get_lightdir_from_elaz(elev, azim, device='cuda'):
     z = -math.cos(math.radians(elev)) * math.cos(math.radians(azim))
     xyz = torch.tensor([x, y, z], device=device).unsqueeze(0)
     return xyz
+
+def generate_train_test(dataset_dir, save_dir, split_ratio=0.8):
+    """
+    This function takes a non-split dataset and randomly splits it into training and testing sets. 
+    Split ratio shows which portion of the initial dataset is the training set.
+    Raw dataset should have the following structure:
+    
+    dataset_dir/
+    ├── negative
+    └── positive
+    
+    Where the "negative" and "positive" directories contain empty and non-empty images respectively (non-empty meaning there is a
+    vehicle in the image).
+    
+    The generated dataset is stored with the following structure:
+    
+    save_dir/
+    ├── test
+    │   ├── negative
+    │   └── positive
+    └── train
+        ├── negative
+        └── positive
+    """
+    image_formats = ['.jpg', '.png']
+    positive_images_dir = os.path.join(dataset_dir, "positive")
+    negative_images_dir = os.path.join(dataset_dir, "negative")
+    
+    # Extract image paths
+    positive_images_paths = []
+    negative_images_paths = []
+    for image_format in image_formats:
+        positive_images = glob.glob(positive_images_dir + "/*" + image_format)
+        negative_images = glob.glob(negative_images_dir + "/*" + image_format)
+        
+        positive_images_paths = positive_images_paths + positive_images
+        negative_images_paths = negative_images_paths + negative_images
+    
+    print(f"Extracted {len(positive_images_paths)} positive images and {len(negative_images_paths)} negative images.")
+    
+    # Shuffle and randomly split the positive and negative lists
+    shuffle(positive_images_paths)
+    shuffle(negative_images_paths)
+    
+    train_pos, test_pos = train_test_split(positive_images_paths, train_size=split_ratio)
+    train_neg, test_neg = train_test_split(negative_images_paths, train_size=split_ratio)
+    
+    # Create the save directories
+    train_pos_dir = os.path.join(save_dir, "train", "positive")
+    train_neg_dir = os.path.join(save_dir, "train", "negative")
+    test_pos_dir = os.path.join(save_dir, "test", "positive")
+    test_neg_dir = os.path.join(save_dir, "test", "negative")
+    Path(train_pos_dir).mkdir(parents=True, exist_ok=True)
+    Path(train_neg_dir).mkdir(parents=True, exist_ok=True)
+    Path(test_pos_dir).mkdir(parents=True, exist_ok=True)
+    Path(test_neg_dir).mkdir(parents=True, exist_ok=True)
+    
+    # Copy the files
+    print("Copying positive train files...")
+    for train_pos_ in train_pos:
+        shutil.copy(train_pos_, train_pos_dir)
+    print("Copying negative train files...")
+    for train_neg_ in train_neg:
+        shutil.copy(train_neg_, train_neg_dir)
+    print("Copying positive test files...")
+    for test_pos_ in test_pos:
+        shutil.copy(test_pos_, test_pos_dir)
+    print("Copying negative test files...")
+    for test_neg_ in test_neg:
+        shutil.copy(test_neg_, test_neg_dir)
+    
+    print("Completed dataset generation!")
