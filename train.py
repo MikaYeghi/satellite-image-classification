@@ -4,7 +4,6 @@ from tqdm import tqdm
 from torch.utils.data import DataLoader
 import torchvision.models as models
 from torch import nn
-from torch.nn import BCELoss
 from sklearn.model_selection import train_test_split
 import seaborn as sn
 import pandas as pd
@@ -17,6 +16,7 @@ from dataset import SatelliteDataset
 from utils import make_train_step, plot_training_info, get_F1_stats, create_model
 from evaluator import SatEvaluator
 from transforms import SatTransforms
+from losses import BCELoss, FocalLoss
 
 import config as cfg
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
@@ -41,7 +41,7 @@ test_loader = DataLoader(test_set, batch_size=cfg.BATCH_SIZE)
 model = create_model(cfg, device)
 
 """Loss function, optimizer and evaluator"""
-loss_fn = BCELoss()
+loss_fn = FocalLoss(reduction='mean')
 optimizer = torch.optim.Adam(model.parameters(), lr=cfg.LR)
 evaluator = SatEvaluator(device=device, pos_label=0, results_dir=cfg.RESULTS_DIR)
 

@@ -1,7 +1,36 @@
 import torch
+import torch.nn.functional as F
+
+import config as cfg
 
 def BCELoss():
     return torch.nn.BCELoss()
+
+def FocalLoss(
+    reduction='none',
+    alpha: float = cfg.FOCAL_LOSS['alpha'],
+    gamma: float = cfg.FOCAL_LOSS['gamma']
+    ):
+    def FocalLoss_(
+        inputs: torch.Tensor,
+        targets: torch.Tensor
+        ):
+        ce_loss = F.binary_cross_entropy(inputs, targets, reduction="none")
+        p_t = inputs * targets + (1 - inputs) * (1 - targets)
+        loss = ce_loss * ((1 - p_t) ** gamma)
+
+        if alpha >= 0:
+            alpha_t = alpha * targets + (1 - alpha) * (1 - targets)
+            loss = alpha_t * loss
+
+        if reduction == "mean":
+            loss = loss.mean()
+        elif reduction == "sum":
+            loss = loss.sum()
+
+        return loss
+
+    return FocalLoss_
 
 def ColorForce(color=(1.0, 1.0, 0.4), device='cuda'):
     def ColorForce_(image):

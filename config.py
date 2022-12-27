@@ -1,4 +1,4 @@
-DATASET_NAME = "real"
+DATASET_NAME = "stan-non-centered"
 if DATASET_NAME == "real":
     TRAIN_PATH = "/home/myeghiaz/Storage/SatClass-Real-0.125m-50px/train"
     TEST_PATH = "/home/myeghiaz/Storage/SatClass-Real-0.125m-50px/test"
@@ -23,23 +23,28 @@ elif DATASET_NAME == "stan-without-shadows":
 else:
     raise NotImplementedError
 
+"""Training parameters"""
 BATCH_SIZE = 1024
-MODEL_WEIGHTS = "saved_models/synthetic-augmented-vgg/model_final.pth"
-# MODEL_WEIGHTS = None
+# MODEL_WEIGHTS = "saved_models/non-centered-baseline-vgg/model_final.pth"
+MODEL_WEIGHTS = None
 NUM_CLASSES = 1 # number of foreground classes
-LR = 0.000005
+LR = 0.000001
 N_EPOCHS = 5
 TEST_SIZE = 0.2
-VAL_FREQ = 2
+VAL_FREQ = 10
+# OUTPUT_DIR = "saved_models/non-centered-weighted-vgg/"
 OUTPUT_DIR = "output/"
 RESULTS_DIR = "results/"
-EVAL_ONLY = True
-FP_FN_analysis = True
+EVAL_ONLY = False
+FP_FN_analysis = False
+APPLY_TRAIN_TRANSFORMS = True
+FOCAL_LOSS = {"alpha": 0.25, "gamma": 2}
+
+"""Attack parameters"""
 BRIGHTNESS_LEVELS = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
 MESHES_DIR = "/home/myeghiaz/Storage/GAN-vehicles-1000"
 SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-0.125m-50px-proba"
 ATTACK_LR = 0.05
-APPLY_TRAIN_TRANSFORMS = False
 MODEL_NAME = 'vgg16'
 HEATMAP_NAME = "corr_heatmap"
 VISUALIZE_HEATMAP_SAMPLES = True
