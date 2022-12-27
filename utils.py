@@ -187,8 +187,21 @@ def generate_train_test(dataset_dir, save_dir, split_ratio=0.8):
     shuffle(positive_images_paths)
     shuffle(negative_images_paths)
     
-    train_pos, test_pos = train_test_split(positive_images_paths, train_size=split_ratio)
-    train_neg, test_neg = train_test_split(negative_images_paths, train_size=split_ratio)
+    if split_ratio > 0 and split_ratio < 1:
+        train_pos, test_pos = train_test_split(positive_images_paths, train_size=split_ratio)
+        train_neg, test_neg = train_test_split(negative_images_paths, train_size=split_ratio)
+    elif split_ratio == 0:
+        train_pos = []
+        train_neg = []
+        test_pos = positive_images_paths.copy()
+        test_neg = negative_images_paths.copy()
+    elif split_ratio == 1:
+        train_pos = positive_images_paths.copy()
+        train_neg = negative_images_paths.copy()
+        test_pos = []
+        test_neg = []
+    else:
+        raise ValueError('Split ratio must be in the range [0, 1]!')
     
     # Create the save directories
     train_pos_dir = os.path.join(save_dir, "train", "positive")
