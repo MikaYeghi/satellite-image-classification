@@ -228,3 +228,12 @@ def generate_train_test(dataset_dir, save_dir, split_ratio=0.8):
         shutil.copy(test_neg_, test_neg_dir)
     
     print("Completed dataset generation!")
+    
+def blend_images(A, B, alpha_A=0.5, alpha_B=0.5):
+    """
+    Blending 2 images following https://en.wikipedia.org/wiki/Alpha_compositing.
+    """
+    assert alpha_A + alpha_B == 1, "Alpha-s must sum to 1!" # QUESTIONABLE!!!
+    alpha_O = alpha_A + alpha_B * (1 - alpha_A)
+    C = (alpha_A * A + alpha_B * (1 - alpha_A) * B) / alpha_O
+    return C

@@ -29,8 +29,6 @@ train_transform = transforms.get_train_transforms()
 test_transform = transforms.get_test_transforms()
 train_set = SatelliteDataset(cfg.TRAIN_PATH, transform=train_transform, device=device)
 test_set = SatelliteDataset(cfg.TEST_PATH, transform=test_transform, device=device)
-# test_set.leave_fraction_of_negatives(0.025)
-# train_set.augment_brightness(cfg.BRIGHTNESS_LEVELS)
 print(f"Train set. {train_set.details()}\nTest set. {test_set.details()}")
 
 """Create the dataloader"""

@@ -110,8 +110,6 @@ class FGSMAttacker:
             if attacked_param == 'textures':
                 for i in range(len(rendering_params['mesh'].textures.maps_list())):
                     rendering_params['mesh'].textures.maps_padded().requires_grad = True
-                    # rendering_params['mesh'].textures.maps_padded().retain_grad()
-                pass
             elif attacked_param == 'mesh':
                 # TODO: make everything related to the mesh (textures, vertices) differentiable
                 raise NotImplementedError

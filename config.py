@@ -1,4 +1,4 @@
-DATASET_NAMES = ["synthetic"]
+DATASET_NAMES = ['synthetic-diversified-1']
 TRAIN_PATH = []
 TEST_PATH = []
 if "real" in DATASET_NAMES:
@@ -45,10 +45,12 @@ RAW_DATASET_DIR = "/var/storage/myeghiaz/GSD-0.125m_sample-size-50_mean-sampling
 RAW_DATASET_SAVE_DIR = "/var/storage/myeghiaz/GSD-0.125m_sample-size-50"
 TRAIN_TEST_SPLIT_RATIO = 0.0
 
+"""Dataset generation parameters"""
+SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-0.125m-50px-proba"
+
 """Attack parameters"""
 BRIGHTNESS_LEVELS = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
 MESHES_DIR = "/home/myeghiaz/Storage/GAN-vehicles-1000"
-SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-0.125m-50px-proba"
 ATTACK_LR = 0.05
 MODEL_NAME = 'vgg16'
 HEATMAP_NAME = "corr_heatmap"
