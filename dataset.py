@@ -29,29 +29,31 @@ class SatelliteDataset(Dataset):
     def extract_metadata(self, data_path, shuffle=True):
         positive_data_path = os.path.join(data_path, "positive")
         negative_data_path = os.path.join(data_path, "negative")
+        formats_list = ['.jpg', '.png']
         
         # Initialize the metadata list
         metadata = []
         
-        # Record positive labels [0 stands for the positive labels]
-        for img_path in glob.glob(positive_data_path + "/*.png"):
-            img_label = 0
-            metadata_ = {
-                "image_path": img_path,
-                "category_id": img_label,
-                "brightness": self.brightness
-            }
-            metadata.append(metadata_)
-        
-        # Record negative labels [1 stands for the negative labels]
-        for img_path in glob.glob(negative_data_path + "/*.png"):
-            img_label = 1
-            metadata_ = {
-                "image_path": img_path,
-                "category_id": img_label,
-                "brightness": self.brightness
-            }
-            metadata.append(metadata_)
+        for img_format in formats_list:
+            # Record positive labels [0 stands for the positive labels]
+            for img_path in glob.glob(positive_data_path + "/*" + img_format):
+                img_label = 0
+                metadata_ = {
+                    "image_path": img_path,
+                    "category_id": img_label,
+                    "brightness": self.brightness
+                }
+                metadata.append(metadata_)
+
+            # Record negative labels [1 stands for the negative labels]
+            for img_path in glob.glob(negative_data_path + "/*" + img_format):
+                img_label = 1
+                metadata_ = {
+                    "image_path": img_path,
+                    "category_id": img_label,
+                    "brightness": self.brightness
+                }
+                metadata.append(metadata_)
         if shuffle:
             random.shuffle(metadata)
         return metadata
