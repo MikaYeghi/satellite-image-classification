@@ -10,10 +10,10 @@ import random
 import pdb
 
 class SatelliteDataset(Dataset):
-    def __init__(self, data_path, metadata=None, transform=None, device='cuda', shuffle=True, brightness=1.0) -> None:
+    def __init__(self, data_paths, metadata=None, transform=None, device='cuda', shuffle=True, brightness=1.0) -> None:
         super().__init__()
         
-        self.data_path = data_path
+        self.data_paths = data_paths
         self.device = device
         
         # Image enhancement
@@ -23,37 +23,38 @@ class SatelliteDataset(Dataset):
         if metadata:
             self.metadata = metadata
         else:
-            self.metadata = self.extract_metadata(data_path, shuffle=shuffle)
+            self.metadata = self.extract_metadata(data_paths, shuffle=shuffle)
         print(f"Loaded a data set with {self.__len__()} images.")
 
-    def extract_metadata(self, data_path, shuffle=True):
-        positive_data_path = os.path.join(data_path, "positive")
-        negative_data_path = os.path.join(data_path, "negative")
+    def extract_metadata(self, data_paths, shuffle=True):
+        positive_data_paths = [os.path.join(data_path, "positive") for data_path in data_paths]
+        negative_data_paths = [os.path.join(data_path, "negative") for data_path in data_paths]
         formats_list = ['.jpg', '.png']
         
         # Initialize the metadata list
         metadata = []
         
         for img_format in formats_list:
-            # Record positive labels [0 stands for the positive labels]
-            for img_path in glob.glob(positive_data_path + "/*" + img_format):
-                img_label = 0
-                metadata_ = {
-                    "image_path": img_path,
-                    "category_id": img_label,
-                    "brightness": self.brightness
-                }
-                metadata.append(metadata_)
-
-            # Record negative labels [1 stands for the negative labels]
-            for img_path in glob.glob(negative_data_path + "/*" + img_format):
-                img_label = 1
-                metadata_ = {
-                    "image_path": img_path,
-                    "category_id": img_label,
-                    "brightness": self.brightness
-                }
-                metadata.append(metadata_)
+            for positive_data_path in positive_data_paths:
+                # Record positive labels [0 stands for the positive labels]
+                for img_path in glob.glob(positive_data_path + "/*" + img_format):
+                    img_label = 0
+                    metadata_ = {
+                        "image_path": img_path,
+                        "category_id": img_label,
+                        "brightness": self.brightness
+                    }
+                    metadata.append(metadata_)
+            for negative_data_path in negative_data_paths:
+                # Record negative labels [1 stands for the negative labels]
+                for img_path in glob.glob(negative_data_path + "/*" + img_format):
+                    img_label = 1
+                    metadata_ = {
+                        "image_path": img_path,
+                        "category_id": img_label,
+                        "brightness": self.brightness
+                    }
+                    metadata.append(metadata_)
         if shuffle:
             random.shuffle(metadata)
         return metadata
