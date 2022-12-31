@@ -72,9 +72,10 @@ class SatelliteDataset(Dataset):
         brightness = data['brightness']
         
         # Modify image brightness
-        enhancer = ImageEnhance.Brightness(image)
-        image = enhancer.enhance(brightness)
-        
+        if brightness != 1.0:
+            enhancer = ImageEnhance.Brightness(image)
+            image = enhancer.enhance(brightness)
+
         if self.transform:
             image = self.transform(image).to(self.device)
         else:
