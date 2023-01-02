@@ -1,4 +1,6 @@
-DATASET_NAMES = ['synthetic-diversified-1']
+"""Dataset parameters"""
+# DATASET_NAMES = ['synthetic-diversified-1', 'adversarial-textures', 'adversarial-background', 'adversarial-shadows']
+DATASET_NAMES = ['synthetic']
 TRAIN_PATH = []
 TEST_PATH = []
 if "real" in DATASET_NAMES:
@@ -22,22 +24,32 @@ if "stan-with-shadows" in DATASET_NAMES:
 if "stan-without-shadows" in DATASET_NAMES:
     TRAIN_PATH.append("/home/myeghiaz/Storage/shadowless-shadow-dataset/without-shadows/train")
     TEST_PATH.append("/home/myeghiaz/Storage/shadowless-shadow-dataset/without-shadows/test")
+if "adversarial-textures" in DATASET_NAMES:
+    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Adversarial-Textures-0.125m-50px")
+if "adversarial-background" in DATASET_NAMES:
+    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Adversarial-Background-0.125m-50px")
+if "adversarial-shadows" in DATASET_NAMES:
+    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Adversarial-Shadows-0.125m-50px")
 
 """Training parameters"""
+NUM_GPUS = 1
+if NUM_GPUS == 1:
+    NUM_DATALOADER_WORKERS = 0
+else:
+    NUM_DATALOADER_WORKERS = 6
 BATCH_SIZE = 1024
-MODEL_WEIGHTS = "saved_models/non-centered-baseline-vgg/model_final.pth"
-# MODEL_WEIGHTS = None
+# MODEL_WEIGHTS = "saved_models/centered-n-non-centered-vgg-augmented/model_final.pth"
+MODEL_WEIGHTS = None
 NUM_CLASSES = 1 # number of foreground classes
 LR = 0.000001
 N_EPOCHS = 1
 TEST_SIZE = 0.2
 VAL_FREQ = 10
-# OUTPUT_DIR = "saved_models/non-centered-weighted-vgg/"
 OUTPUT_DIR = "output/"
 RESULTS_DIR = "results/"
-EVAL_ONLY = True
+EVAL_ONLY = False
 FP_FN_analysis = False
-APPLY_TRAIN_TRANSFORMS = True
+APPLY_TRAIN_TRANSFORMS = False
 FOCAL_LOSS = {"alpha": 0.5, "gamma": 2}
 
 """Generating a train-test dataset from raw dataset"""
@@ -55,6 +67,6 @@ ATTACK_LR = 0.05
 MODEL_NAME = 'vgg16'
 HEATMAP_NAME = "corr_heatmap"
 VISUALIZE_HEATMAP_SAMPLES = True
-ATTACKED_PARAMS = ['textures']
+ATTACKED_PARAMS = ['shadows']
 ADVERSARIAL_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Adversarial-0.125m-50px-proba"
-NUM_ADV_IMGS = 1
+NUM_ADV_IMGS = 10000 # Number of adversarial images that will be generated during the attack
