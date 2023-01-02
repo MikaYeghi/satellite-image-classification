@@ -116,10 +116,19 @@ def create_model(cfg, device='cuda'):
     else:
         raise NotImplementedError
     
-    # Load model weights
-    if cfg.MODEL_WEIGHTS:
-        print(f"Loading model weights from {cfg.MODEL_WEIGHTS}")
-        model.load_state_dict(torch.load(cfg.MODEL_WEIGHTS))
+    # Check the number of GPU-s
+    if cfg.NUM_GPUS > 1:
+        model = nn.DataParallel(model)
+        
+        # Load model weights
+        if cfg.MODEL_WEIGHTS:
+            print(f"Loading model weights from {cfg.MODEL_WEIGHTS}")
+            model.module.load_state_dict(torch.load(cfg.MODEL_WEIGHTS))
+    else:
+        # Load model weights
+        if cfg.MODEL_WEIGHTS:
+            print(f"Loading model weights from {cfg.MODEL_WEIGHTS}")
+            model.load_state_dict(torch.load(cfg.MODEL_WEIGHTS))
     
     # Move the model to the device
     model.to(device)
