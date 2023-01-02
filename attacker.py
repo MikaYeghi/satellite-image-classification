@@ -8,6 +8,7 @@ from pathlib import Path
 
 from renderer import Renderer
 from losses import BCELoss, ColorForce, BCEColor
+from utils import blend_images
 
 import pdb
 
@@ -58,15 +59,20 @@ class FGSMAttacker:
                 intensity=rendering_params['intensity'],
                 ambient_color=rendering_params['ambient_color']
             ).permute(2, 0, 1).unsqueeze(0)
+            
             if k == 0:
-                attacked_image.set_original_image(image[0])
+                attacked_image.set_original_image(image[0].clone())
+                
+            # Check for shadow attacks
+            if 'shadow_image' in rendering_params:
+                image = blend_images(image, rendering_params['shadow_image'])
             
             # Run prediction on the image
             pred = self.activation(self.model(image))
             
             # If the class is incorrect, then stop. Otherwise, perform a single attack step
             if (pred > 0.5).int().item() != true_label:
-                attacked_image.set_adversarial_image(image[0])
+                attacked_image.set_adversarial_image(image[0].clone())
                 attacked_image.set_rendering_params(rendering_params)
                 self.adversarial_examples_list.append(attacked_image)
                 break
@@ -77,7 +83,7 @@ class FGSMAttacker:
 
                 # Propagate the gradients
                 loss.backward()
-            
+                
                 # Call FGSM attack
                 rendering_params = self.fgsm_attack(rendering_params)
                 
@@ -90,18 +96,17 @@ class FGSMAttacker:
             if param == 'textures':
                 # Collect the element-wise sign of the data gradient
                 sign_grad = rendering_params['mesh'].textures.maps_padded().grad.data.sign()
-                
                 # Perturb the data
                 rendering_params['mesh'].textures.maps_padded().data = rendering_params['mesh'].textures.maps_padded().data + self.epsilon * sign_grad
             elif param == 'mesh':
                 # TODO: make everything related to the mesh (textures, vertices) differentiable
                 raise NotImplementedError
             elif param in rendering_params:
-                # Collect the element-wise sign of the data gradient
                 sign_grad = rendering_params[param].grad.data.sign()
-                
-                # Perturb the data
                 rendering_params[param].data = rendering_params[param].data + self.epsilon * sign_grad
+            elif param == 'shadows':
+                sign_grad = rendering_params['shadow_image'].grad.data.sign()
+                rendering_params['shadow_image'].data = rendering_params['shadow_image'].data + self.epsilon * sign_grad
         
         return rendering_params
     
@@ -115,6 +120,11 @@ class FGSMAttacker:
                 raise NotImplementedError
             elif attacked_param in rendering_params:
                 rendering_params[attacked_param].requires_grad = True
+            elif attacked_param == 'shadows':
+                H, W = rendering_params['background_image'].shape[1:3]
+                shadow_image = torch.rand(size=(1, H, W), device=self.device)
+                rendering_params['shadow_image'] = shadow_image.clone()
+                rendering_params['shadow_image'].requires_grad = True
 
         return rendering_params
     
@@ -128,6 +138,8 @@ class FGSMAttacker:
                 raise NotImplementedError
             elif param in rendering_params:
                 rendering_params[param].grad.zero_()
+            elif param == 'shadows':
+                rendering_params['shadow_image'].grad.zero_()
     
     def EOT_attack_scene(self, attacked_image, true_label=0, N_transforms=10):
         """

@@ -41,8 +41,8 @@ for background_image, label in tqdm(train_set):
     attacked_image = AttackedImage(background_image.clone(), mesh, device=device)
         
     # Generate the adversarial example
-    # attacker.attack_single_image(attacked_image)
-    attacker.EOT_attack_scene(attacked_image)
+    attacker.attack_single_image(attacked_image)
+    # attacker.EOT_attack_scene(attacked_image)
     
     t.set_description(f"Pairs: {attacker.get_num_pairs()}")
     
