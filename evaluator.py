@@ -51,19 +51,25 @@ class SatEvaluator():
         return confusion_matrix(self.total_gt.cpu(), self.total_preds.cpu(), normalize='true')
     
     def plot_training_info(self):
-        plt.figure(figsize=(6.4, 7))
+        plt.figure(figsize=(6.4, 7.5))
         plt.subplot(211)
         plt.plot(self.train_losses, 'b')
-        plt.grid(True)
         plt.xlabel("Iteration number")
         plt.ylabel("Cross Entropy Loss")
         plt.title("Training loss")
+        if len(self.train_losses) > 0:
+            plt.yscale('log')
+        plt.grid(True)
         plt.subplot(212)
         plt.plot(self.test_losses, 'b')
-        plt.grid(True)
         plt.xlabel("Iteration number")
         plt.ylabel("Cross Entropy Loss")
         plt.title("Validation loss")
+        if len(self.test_losses) > 0:
+            plt.yscale('log')
+        plt.grid(True)
+        
+        plt.tight_layout()
 
         save_dir = os.path.join(self.save_dir, "trainval_curves.jpg")
         print(f"Saving the graphs to {save_dir}")
