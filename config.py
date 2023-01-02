@@ -1,3 +1,5 @@
+import os
+
 """Dataset parameters"""
 # DATASET_NAMES = ['synthetic-diversified-1', 'adversarial-textures', 'adversarial-background', 'adversarial-shadows']
 DATASET_NAMES = ['synthetic']
@@ -42,11 +44,12 @@ BATCH_SIZE = 1024
 MODEL_WEIGHTS = None
 NUM_CLASSES = 1 # number of foreground classes
 LR = 0.000001
-N_EPOCHS = 1
+N_EPOCHS = 5
 TEST_SIZE = 0.2
-VAL_FREQ = 10
-OUTPUT_DIR = "output/"
+VAL_FREQ = 1
+OUTPUT_DIR = "saved_models/proba/"
 RESULTS_DIR = "results/"
+LOG_DIR = os.path.join(OUTPUT_DIR, "logs")
 EVAL_ONLY = False
 FP_FN_analysis = False
 APPLY_TRAIN_TRANSFORMS = False

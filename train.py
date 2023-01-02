@@ -11,6 +11,7 @@ from matplotlib import pyplot as plt
 from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
 from pathlib import Path
 from torchvision.utils import save_image
+from torch.utils.tensorboard import SummaryWriter
 
 from dataset import SatelliteDataset
 from utils import make_train_step, plot_training_info, get_F1_stats, create_model
@@ -28,17 +29,21 @@ try:
 except RuntimeError:
     print("NOTE: UNKNOWN THING DIDN'T WORK.")
 
-def do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step):
+def do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step, writer):
+    iter_counter = 0
     for epoch in range(cfg.N_EPOCHS):
         t = tqdm(train_loader, desc=f"Epoch #{epoch + 1}")
         for images_batch, labels_batch in t:
             labels_batch = labels_batch.unsqueeze(1).float().to(device)
 
             loss = train_step(images_batch, labels_batch)
-
+            
+            writer.add_scalar("Training loss", loss, iter_counter)
             evaluator.record_train_loss(loss)
 
             t.set_description(f"Epoch: #{epoch + 1}. Loss: {round(loss, 8)}")
+            
+            iter_counter += 1
 
         # Save the intermediate model
         Path(cfg.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
@@ -56,6 +61,7 @@ def do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step):
                     preds = activation(model(images_batch))
 
                     val_loss = loss_fn(preds, labels_batch)
+                    writer.add_scalar("Validation loss", val_loss.item(), iter_counter)
                     evaluator.record_test_loss(val_loss.item())
 
                     t.set_description(f"Epoch: #{epoch + 1}. Validation loss: {round(val_loss.item(), 4)}.")
@@ -122,8 +128,15 @@ if __name__ == '__main__':
 
     """Training"""
     train_step = make_train_step(model, loss_fn, optimizer)
-
+    writer = SummaryWriter(log_dir=cfg.LOG_DIR)
+    
+    # Run training
     if not cfg.EVAL_ONLY:
-        do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step)
+        do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step, writer)
 
+    # Run evaluation
     do_test(test_loader, model, evaluator)
+    
+    # Close the tensorboard logger
+    writer.flush()
+    writer.close()
