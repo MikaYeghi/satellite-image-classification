@@ -115,7 +115,7 @@ if __name__ == '__main__':
     """Loss function, optimizer and evaluator"""
     loss_fn = BCELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.LR)
-    evaluator = SatEvaluator(device=device, pos_label=0, results_dir=cfg.OUTPUT_DIR)
+    evaluator = SatEvaluator(device=device, pos_label=0, save_dir=cfg.OUTPUT_DIR)
 
     """Training"""
     train_step = make_train_step(model, loss_fn, optimizer)
