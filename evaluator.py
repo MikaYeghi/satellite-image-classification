@@ -8,10 +8,10 @@ import seaborn as sn
 import os
 
 class SatEvaluator():
-    def __init__(self, device='cuda:0', pos_label=0, results_dir="results"):
+    def __init__(self, device='cuda:0', pos_label=0, save_dir="results"):
         self.device = device
         self.pos_label = pos_label
-        self.results_dir = results_dir
+        self.save_dir = save_dir
         
         self.total_preds = torch.empty(size=(0, 1), device=device)
         self.total_gt = torch.empty(size=(0, 1), device=device)
@@ -22,8 +22,8 @@ class SatEvaluator():
         # FP-FN analysis
         self.FP_counter = 0
         self.FN_counter = 0
-        self.FP_save_dir = os.path.join(results_dir, "fp-fn-analysis", "FP")
-        self.FN_save_dir = os.path.join(results_dir, "fp-fn-analysis", "FN")
+        self.FP_save_dir = os.path.join(save_dir, "fp-fn-analysis", "FP")
+        self.FN_save_dir = os.path.join(save_dir, "fp-fn-analysis", "FN")
         Path(self.FP_save_dir).mkdir(parents=True, exist_ok=True) # create the directory if necessary
         Path(self.FN_save_dir).mkdir(parents=True, exist_ok=True) # create the directory if necessary
     
@@ -51,7 +51,7 @@ class SatEvaluator():
         return confusion_matrix(self.total_gt.cpu(), self.total_preds.cpu(), normalize='true')
     
     def plot_training_info(self):
-        plt.figure()
+        plt.figure(figsize=(6.4, 7))
         plt.subplot(211)
         plt.plot(self.train_losses, 'b')
         plt.grid(True)
@@ -65,7 +65,7 @@ class SatEvaluator():
         plt.ylabel("Cross Entropy Loss")
         plt.title("Validation loss")
 
-        save_dir = os.path.join(self.results_dir, "trainval_curves.jpg")
+        save_dir = os.path.join(self.save_dir, "trainval_curves.jpg")
         print(f"Saving the graphs to {save_dir}")
         plt.savefig(save_dir)
         plt.close('all')
@@ -77,7 +77,7 @@ class SatEvaluator():
         )
         plt.figure()
         sn.heatmap(confusion_matrix, annot=True, cmap="Blues")
-        plt.savefig(os.path.join(self.results_dir, "confmat.jpg"))
+        plt.savefig(os.path.join(self.save_dir, "confmat.jpg"))
         plt.close('all')
     
     def reset(self):
