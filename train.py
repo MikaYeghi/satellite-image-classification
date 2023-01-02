@@ -14,7 +14,7 @@ from torchvision.utils import save_image
 from torch.utils.tensorboard import SummaryWriter
 
 from dataset import SatelliteDataset
-from utils import make_train_step, plot_training_info, get_F1_stats, create_model
+from utils import make_train_step, plot_training_info, get_F1_stats, create_model, save_checkpoint, load_checkpoint
 from evaluator import SatEvaluator
 from transforms import SatTransforms
 from losses import BCELoss, FocalLoss
@@ -29,9 +29,11 @@ try:
 except RuntimeError:
     print("NOTE: UNKNOWN THING DIDN'T WORK.")
 
-def do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step, writer):
-    iter_counter = 0
-    for epoch in range(cfg.N_EPOCHS):
+def do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step, writer, start_epoch, iter_counter):
+    if start_epoch >= cfg.N_EPOCHS:
+        print("Early stopping training.")
+        return
+    for epoch in range(start_epoch, cfg.N_EPOCHS):
         t = tqdm(train_loader, desc=f"Epoch #{epoch + 1}")
         for images_batch, labels_batch in t:
             labels_batch = labels_batch.unsqueeze(1).float().to(device)
@@ -46,8 +48,7 @@ def do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step, w
             iter_counter += 1
 
         # Save the intermediate model
-        Path(cfg.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
-        torch.save(model.state_dict(), os.path.join(cfg.OUTPUT_DIR, f"model_{epoch + 1}.pth"))
+        save_checkpoint(cfg, model, epoch, iter_counter, is_final=False)
 
         if (epoch + 1) % cfg.VAL_FREQ == 0:
             print("Running validation...")
@@ -66,12 +67,7 @@ def do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step, w
 
                     t.set_description(f"Epoch: #{epoch + 1}. Validation loss: {round(val_loss.item(), 4)}.")
 
-    model_save_dir = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")
-    print(f"Saving the final model to {model_save_dir}")
-    if cfg.NUM_GPUS > 1:
-        torch.save(model.module.state_dict(), model_save_dir)
-    else:
-        torch.save(model.state_dict(), model_save_dir)
+    save_checkpoint(cfg, model, epoch, iter_counter, is_final=True)
     evaluator.plot_training_info()
 
 def do_test(test_loader, model, evaluator):
@@ -119,7 +115,8 @@ if __name__ == '__main__':
     test_loader = DataLoader(test_set, batch_size=cfg.BATCH_SIZE, num_workers=cfg.NUM_DATALOADER_WORKERS)
 
     """Initialize the model"""
-    model = create_model(cfg, device)
+    # model = create_model(cfg, device)
+    start_epoch, iter_counter, model = load_checkpoint(cfg, device)
 
     """Loss function, optimizer and evaluator"""
     loss_fn = BCELoss()
@@ -130,9 +127,12 @@ if __name__ == '__main__':
     train_step = make_train_step(model, loss_fn, optimizer)
     writer = SummaryWriter(log_dir=cfg.LOG_DIR)
     
+    # Make sure the save directory exists
+    Path(cfg.OUTPUT_DIR).mkdir(parents=True, exist_ok=True)
+    
     # Run training
     if not cfg.EVAL_ONLY:
-        do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step, writer)
+        do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step, writer, start_epoch, iter_counter)
 
     # Run evaluation
     do_test(test_loader, model, evaluator)

@@ -2,7 +2,7 @@ import os
 
 """Dataset parameters"""
 # DATASET_NAMES = ['synthetic-diversified-1', 'adversarial-textures', 'adversarial-background', 'adversarial-shadows']
-DATASET_NAMES = ['synthetic']
+DATASET_NAMES = ['real']
 TRAIN_PATH = []
 TEST_PATH = []
 if "real" in DATASET_NAMES:
@@ -34,23 +34,23 @@ if "adversarial-shadows" in DATASET_NAMES:
     TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Adversarial-Shadows-0.125m-50px")
 
 """Training parameters"""
-NUM_GPUS = 1
+NUM_GPUS = 2
 if NUM_GPUS == 1:
     NUM_DATALOADER_WORKERS = 0
 else:
     NUM_DATALOADER_WORKERS = 6
 BATCH_SIZE = 1024
-# MODEL_WEIGHTS = "saved_models/centered-n-non-centered-vgg-augmented/model_final.pth"
-MODEL_WEIGHTS = None
+MODEL_WEIGHTS = "saved_models/synthetic-augmented-vgg/model_final.pth"
+# MODEL_WEIGHTS = None
 NUM_CLASSES = 1 # number of foreground classes
 LR = 0.000001
-N_EPOCHS = 5
+N_EPOCHS = 15
 TEST_SIZE = 0.2
 VAL_FREQ = 1
-OUTPUT_DIR = "saved_models/proba/"
+OUTPUT_DIR = "output/"
 RESULTS_DIR = "results/"
 LOG_DIR = os.path.join(OUTPUT_DIR, "logs")
-EVAL_ONLY = False
+EVAL_ONLY = True
 FP_FN_analysis = False
 APPLY_TRAIN_TRANSFORMS = False
 FOCAL_LOSS = {"alpha": 0.5, "gamma": 2}

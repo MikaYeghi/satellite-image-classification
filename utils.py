@@ -100,7 +100,7 @@ def sample_random_elev_azimuth(x_min, y_min, x_max, y_max, distance):
     
     return (elevation, azimuth)
 
-def create_model(cfg, device='cuda'):
+def initialize_empty_model(cfg, device='cuda'):
     # Get the model name
     model_name = cfg.MODEL_NAME
     
@@ -115,6 +115,10 @@ def create_model(cfg, device='cuda'):
         model.classifier[6] = torch.nn.Linear(4096, 1, device=device, dtype=torch.float32)
     else:
         raise NotImplementedError
+    return model
+
+def create_model(cfg, device='cuda'):
+    model = initialize_empty_model(cfg, device)
     
     # Check the number of GPU-s
     if cfg.NUM_GPUS > 1:
@@ -134,7 +138,7 @@ def create_model(cfg, device='cuda'):
     model.to(device)
     
     return model
-    
+
 def load_meshes(cfg, shuffle_=True, device='cuda'):
     print(f"Loading meshes from {cfg.MESHES_DIR}")
     meshes = []
@@ -246,3 +250,58 @@ def blend_images(A, B, alpha_A=0.5, alpha_B=0.5):
     alpha_O = alpha_A + alpha_B * (1 - alpha_A)
     C = (alpha_A * A + alpha_B * (1 - alpha_A) * B) / alpha_O
     return C
+
+def save_checkpoint(cfg, model, epoch, iter_counter, is_final):
+    if is_final:
+        save_path = os.path.join(cfg.OUTPUT_DIR, "model_final.pt")
+    else:
+        save_path = os.path.join(cfg.OUTPUT_DIR, f"model_{iter_counter}.pt")
+    
+    print(f"Saving checkpoint to {save_path}")
+    
+    model_state_dict = model.state_dict() if cfg.NUM_GPUS == 1 else model.module.state_dict()
+    torch.save({
+        "epoch": epoch,
+        "iter_counter": iter_counter,
+        "model_state_dict": model_state_dict,
+    }, save_path)
+
+def load_checkpoint(cfg, device='cuda'):
+    if cfg.MODEL_WEIGHTS:
+        print(f"Loading checkpoint from {cfg.MODEL_WEIGHTS}")
+        # If there is a model checkpoint, load it
+        if cfg.MODEL_WEIGHTS.split('.')[-1] == 'pth':
+            # Load as the old checkpoint
+            epoch = 0
+            iter_counter = 0
+            model = create_model(cfg, device)
+        elif cfg.MODEL_WEIGHTS.split('.')[-1] == 'pt':
+            # Load as the new checkpoint
+            checkpoint = torch.load(cfg.MODEL_WEIGHTS)
+            
+            # Load side parameters
+            epoch = checkpoint['epoch'] + 1
+            iter_counter = checkpoint['iter_counter']
+            
+            # Load model weights
+            model = initialize_empty_model(cfg, device)
+            if cfg.NUM_GPUS > 1:
+                model = nn.DataParallel(model)
+
+                # Load model weights
+                if cfg.MODEL_WEIGHTS:
+                    model.module.load_state_dict(checkpoint['model_state_dict'])
+            else:
+                # Load model weights
+                if cfg.MODEL_WEIGHTS:
+                    model.load_state_dict(checkpoint['model_state_dict'])
+        else:
+            raise NotImplementedError
+    else:
+        # If there is no model checkpoint, simply initialize the epoch, iteration counter and model
+        epoch = 0
+        iter_counter = 0
+        model = initialize_empty_model(cfg, device)
+    
+    model.to(device)
+    return (epoch, iter_counter, model)
