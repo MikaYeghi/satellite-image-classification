@@ -62,7 +62,10 @@ def do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step):
 
     model_save_dir = os.path.join(cfg.OUTPUT_DIR, "model_final.pth")
     print(f"Saving the final model to {model_save_dir}")
-    torch.save(model.module.state_dict(), model_save_dir)
+    if cfg.NUM_GPUS > 1:
+        torch.save(model.module.state_dict(), model_save_dir)
+    else:
+        torch.save(model.state_dict(), model_save_dir)
     evaluator.plot_training_info()
 
 def do_test(test_loader, model, evaluator):
@@ -106,8 +109,8 @@ if __name__ == '__main__':
     print(f"Train set. {train_set.details()}\nTest set. {test_set.details()}")
 
     """Create the dataloader"""
-    train_loader = DataLoader(train_set, batch_size=cfg.BATCH_SIZE, num_workers=6)
-    test_loader = DataLoader(test_set, batch_size=cfg.BATCH_SIZE, num_workers=6)
+    train_loader = DataLoader(train_set, batch_size=cfg.BATCH_SIZE, num_workers=cfg.NUM_DATALOADER_WORKERS)
+    test_loader = DataLoader(test_set, batch_size=cfg.BATCH_SIZE, num_workers=cfg.NUM_DATALOADER_WORKERS)
 
     """Initialize the model"""
     model = create_model(cfg, device)
