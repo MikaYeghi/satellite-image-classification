@@ -115,22 +115,18 @@ def initialize_empty_model(cfg, device='cuda'):
         model.classifier[6] = torch.nn.Linear(4096, 1, device=device, dtype=torch.float32)
     else:
         raise NotImplementedError
+    
+    model = nn.DataParallel(model) if cfg.NUM_GPUS > 1 else model
     return model
 
 def create_model(cfg, device='cuda'):
     model = initialize_empty_model(cfg, device)
     
-    # Check the number of GPU-s
-    if cfg.NUM_GPUS > 1:
-        model = nn.DataParallel(model)
-        
-        # Load model weights
-        if cfg.MODEL_WEIGHTS:
+    if cfg.MODEL_WEIGHTS:
+        if cfg.NUM_GPUS > 1:
             print(f"Loading model weights from {cfg.MODEL_WEIGHTS}")
             model.module.load_state_dict(torch.load(cfg.MODEL_WEIGHTS))
-    else:
-        # Load model weights
-        if cfg.MODEL_WEIGHTS:
+        else:
             print(f"Loading model weights from {cfg.MODEL_WEIGHTS}")
             model.load_state_dict(torch.load(cfg.MODEL_WEIGHTS))
     
@@ -285,15 +281,10 @@ def load_checkpoint(cfg, device='cuda'):
             
             # Load model weights
             model = initialize_empty_model(cfg, device)
-            if cfg.NUM_GPUS > 1:
-                model = nn.DataParallel(model)
-
-                # Load model weights
-                if cfg.MODEL_WEIGHTS:
+            if cfg.MODEL_WEIGHTS:
+                if cfg.NUM_GPUS > 1:
                     model.module.load_state_dict(checkpoint['model_state_dict'])
-            else:
-                # Load model weights
-                if cfg.MODEL_WEIGHTS:
+                else:
                     model.load_state_dict(checkpoint['model_state_dict'])
         else:
             raise NotImplementedError
