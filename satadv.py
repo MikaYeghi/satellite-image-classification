@@ -15,6 +15,8 @@ import numpy as np
 import math
 import seaborn as sn
 import shutil
+from torchvision.transforms.functional import pil_to_tensor
+from PIL import Image
 
 from renderer import Renderer
 from utils import random_unique_split, sample_random_elev_azimuth, create_model
@@ -30,6 +32,7 @@ class SatAdv(nn.Module):
         self.cfg = cfg
         self.model = create_model(cfg, device)
         self.meshes = self.load_meshes()
+        self.camouflages = self.load_camouflages()
         
         # Initialize parameters
         self.lights_direction = torch.tensor([0.0,-1.0,0.0], device=device, requires_grad=True).unsqueeze(0)
@@ -59,6 +62,20 @@ class SatAdv(nn.Module):
             random.shuffle(meshes)
         return meshes
     
+    def load_camouflages(self):
+        camouflage_paths = glob.glob(self.cfg.CAMOUFLAGE_TEXTURES_PATH + "/*.png") # Textures must be png files
+        camouflages = []
+        k = 0
+        for camouflage_path in camouflage_paths:
+            camouflage = Image.open(camouflage_path).convert("RGB")
+            camouflage = pil_to_tensor(camouflage)[:3, ...]
+            camouflage = camouflage / 255. if camouflage.dtype == torch.uint8 else camouflage
+            camouflage = camouflage.to(self.device)
+            camouflages.append(camouflage)
+            save_image(camouflage, f"results/cam_{k}.jpg")
+            k += 1
+        return camouflages
+    
     def render_synthetic_image(self, mesh, background_image):
         return self.renderer.render(mesh, 
                                     background_image, 
@@ -67,6 +84,10 @@ class SatAdv(nn.Module):
                                      self.azimuth, 
                                      self.lights_direction
                                     )
+    
+    def dress_camouflage(self, mesh, camouflage):
+        mesh.textures._maps_padded.data = camouflage.unsqueeze(0).permute(0, 2, 3, 1).clone().to(self.device)
+        return mesh
     
     def generate_synthetic_subset(self, dataset, dataset_type, meshes, positive_limit=None, negative_limit=None):
         print(f"Generating {dataset_type} synthetic dataset.")
@@ -117,6 +138,10 @@ class SatAdv(nn.Module):
         print(f"Generating {len(positive_files)} positive samples.")
         for image, label in tqdm(dataset):
             mesh = random.choice(meshes)
+            
+            # Change textures to camouflage
+            if self.cfg.DRESS_CAMOUFLAGE:
+                mesh = self.dress_camouflage(mesh, random.choice(self.camouflages))
             # Positive class (i.e. with vehicle)
             # The numbers below were selected to make sure that the elevation is above 70 degrees
             distance = 5.0

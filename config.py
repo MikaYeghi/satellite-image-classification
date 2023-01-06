@@ -2,7 +2,7 @@ import os
 
 """Dataset parameters"""
 # DATASET_NAMES = ['synthetic-diversified-1', 'adversarial-textures', 'adversarial-background', 'adversarial-shadows']
-DATASET_NAMES = ['real']
+DATASET_NAMES = ['organic-camouflage-centered']
 TRAIN_PATH = []
 TEST_PATH = []
 if "real" in DATASET_NAMES:
@@ -32,26 +32,29 @@ if "adversarial-background" in DATASET_NAMES:
     TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Adversarial-Background-0.125m-50px")
 if "adversarial-shadows" in DATASET_NAMES:
     TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Adversarial-Shadows-0.125m-50px")
+if "organic-camouflage-centered" in DATASET_NAMES:
+    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Organic-Camouflages-0.125m-50px/train")
+    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Organic-Camouflages-0.125m-50px/test")
 
 """Training parameters"""
-NUM_GPUS = 2
+NUM_GPUS = 1
 if NUM_GPUS == 1:
     NUM_DATALOADER_WORKERS = 0
 else:
     NUM_DATALOADER_WORKERS = 6
 BATCH_SIZE = 1024
-MODEL_WEIGHTS = None
-# MODEL_WEIGHTS = "saved_models/non-centered-weighted-vgg/model_final.pt"
+# MODEL_WEIGHTS = None
+MODEL_WEIGHTS = "saved_models/real-baseline/model_final.pth"
 NUM_CLASSES = 1 # number of foreground classes
 LR = 0.0000001
 N_EPOCHS = 2
 TEST_SIZE = 0.2
 VAL_FREQ = 1
-OUTPUT_DIR = "saved_models/non-centered-weighted-vgg/"
+OUTPUT_DIR = "output/"
 RESULTS_DIR = "results/"
 LOG_DIR = os.path.join(OUTPUT_DIR, "logs")
 EVAL_ONLY = True
-FP_FN_analysis = False
+FP_FN_analysis = True
 APPLY_TRAIN_TRANSFORMS = False
 FOCAL_LOSS = {"alpha": 0.1, "gamma": 2}
 
@@ -61,19 +64,21 @@ RAW_DATASET_SAVE_DIR = "/var/storage/myeghiaz/GSD-0.125m_sample-size-50"
 TRAIN_TEST_SPLIT_RATIO = 0.0
 
 """Dataset generation parameters"""
-SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-0.125m-50px-proba"
-MESHES_DIR = "/home/myeghiaz/Storage/GAN-vehicles"
+SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-Organic-Camouflages-0.125m-50px"
+MESHES_DIR = "/home/myeghiaz/Storage/GAN-vehicles-1000"
 POSITIVE_LIMIT_TRAIN = None
 NEGATIVE_LIMIT_TRAIN = None
 POSITIVE_LIMIT_TEST = None
 NEGATIVE_LIMIT_TEST = None
+CAMOUFLAGE_TEXTURES_PATH = "/var/storage/myeghiaz/organic-camouflages"
+DRESS_CAMOUFLAGE = True
 
 """Attack parameters"""
 BRIGHTNESS_LEVELS = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
 ATTACK_LR = 0.05
-MODEL_NAME = 'vgg16'
+MODEL_NAME = 'resnet101'
 HEATMAP_NAME = "corr_heatmap"
 VISUALIZE_HEATMAP_SAMPLES = True
 ATTACKED_PARAMS = ['shadows']
-ADVERSARIAL_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Adversarial-0.125m-50px-proba"
+ADVERSARIAL_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Adversarial-0.125m-50px"
 NUM_ADV_IMGS = 10000 # Number of adversarial images that will be generated during the attack
