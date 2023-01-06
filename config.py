@@ -40,20 +40,20 @@ if NUM_GPUS == 1:
 else:
     NUM_DATALOADER_WORKERS = 6
 BATCH_SIZE = 1024
-MODEL_WEIGHTS = "saved_models/synthetic-augmented-vgg/model_final.pth"
-# MODEL_WEIGHTS = None
+MODEL_WEIGHTS = None
+# MODEL_WEIGHTS = "saved_models/non-centered-weighted-vgg/model_final.pt"
 NUM_CLASSES = 1 # number of foreground classes
-LR = 0.000001
-N_EPOCHS = 15
+LR = 0.0000001
+N_EPOCHS = 2
 TEST_SIZE = 0.2
 VAL_FREQ = 1
-OUTPUT_DIR = "output/"
+OUTPUT_DIR = "saved_models/non-centered-weighted-vgg/"
 RESULTS_DIR = "results/"
 LOG_DIR = os.path.join(OUTPUT_DIR, "logs")
 EVAL_ONLY = True
 FP_FN_analysis = False
 APPLY_TRAIN_TRANSFORMS = False
-FOCAL_LOSS = {"alpha": 0.5, "gamma": 2}
+FOCAL_LOSS = {"alpha": 0.1, "gamma": 2}
 
 """Generating a train-test dataset from raw dataset"""
 RAW_DATASET_DIR = "/var/storage/myeghiaz/GSD-0.125m_sample-size-50_mean-sampling-freq-1"
@@ -62,10 +62,14 @@ TRAIN_TEST_SPLIT_RATIO = 0.0
 
 """Dataset generation parameters"""
 SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-0.125m-50px-proba"
+MESHES_DIR = "/home/myeghiaz/Storage/GAN-vehicles"
+POSITIVE_LIMIT_TRAIN = None
+NEGATIVE_LIMIT_TRAIN = None
+POSITIVE_LIMIT_TEST = None
+NEGATIVE_LIMIT_TEST = None
 
 """Attack parameters"""
 BRIGHTNESS_LEVELS = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
-MESHES_DIR = "/home/myeghiaz/Storage/GAN-vehicles-1000"
 ATTACK_LR = 0.05
 MODEL_NAME = 'vgg16'
 HEATMAP_NAME = "corr_heatmap"
