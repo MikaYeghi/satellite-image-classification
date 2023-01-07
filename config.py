@@ -2,7 +2,7 @@ import os
 
 """Dataset parameters"""
 # DATASET_NAMES = ['synthetic-diversified-1', 'adversarial-textures', 'adversarial-background', 'adversarial-shadows']
-DATASET_NAMES = ['organic-camouflage-centered']
+DATASET_NAMES = ['pixelated-camouflage-centered-64']
 TRAIN_PATH = []
 TEST_PATH = []
 if "real" in DATASET_NAMES:
@@ -35,8 +35,20 @@ if "adversarial-shadows" in DATASET_NAMES:
 if "organic-camouflage-centered" in DATASET_NAMES:
     TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Organic-Camouflages-0.125m-50px/train")
     TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Organic-Camouflages-0.125m-50px/test")
+if "pixelated-camouflage-centered-8" in DATASET_NAMES:
+    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-8/train")
+    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-8/test")
+if "pixelated-camouflage-centered-16" in DATASET_NAMES:
+    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-16/train")
+    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-16/test")
+if "pixelated-camouflage-centered-32" in DATASET_NAMES:
+    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-32/train")
+    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-32/test")
+if "pixelated-camouflage-centered-64" in DATASET_NAMES:
+    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-64/train")
+    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-64/test") 
 
-"""Training parameters"""
+"""Training and testing parameters"""
 NUM_GPUS = 1
 if NUM_GPUS == 1:
     NUM_DATALOADER_WORKERS = 0
@@ -44,7 +56,7 @@ else:
     NUM_DATALOADER_WORKERS = 6
 BATCH_SIZE = 1024
 # MODEL_WEIGHTS = None
-MODEL_WEIGHTS = "saved_models/real-baseline/model_final.pth"
+MODEL_WEIGHTS = "saved_models/synthetic-augmented-vgg/model_final.pth"
 NUM_CLASSES = 1 # number of foreground classes
 LR = 0.0000001
 N_EPOCHS = 2
@@ -56,6 +68,7 @@ LOG_DIR = os.path.join(OUTPUT_DIR, "logs")
 EVAL_ONLY = True
 FP_FN_analysis = True
 APPLY_TRAIN_TRANSFORMS = False
+MODEL_NAME = 'vgg16'
 FOCAL_LOSS = {"alpha": 0.1, "gamma": 2}
 
 """Generating a train-test dataset from raw dataset"""
@@ -64,19 +77,18 @@ RAW_DATASET_SAVE_DIR = "/var/storage/myeghiaz/GSD-0.125m_sample-size-50"
 TRAIN_TEST_SPLIT_RATIO = 0.0
 
 """Dataset generation parameters"""
-SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-Organic-Camouflages-0.125m-50px"
+SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-64"
 MESHES_DIR = "/home/myeghiaz/Storage/GAN-vehicles-1000"
 POSITIVE_LIMIT_TRAIN = None
 NEGATIVE_LIMIT_TRAIN = None
 POSITIVE_LIMIT_TEST = None
 NEGATIVE_LIMIT_TEST = None
-CAMOUFLAGE_TEXTURES_PATH = "/var/storage/myeghiaz/organic-camouflages"
-DRESS_CAMOUFLAGE = True
+CAMOUFLAGE_TEXTURES_PATH = "/var/storage/myeghiaz/pixelated-camouflages/block-64"
+DRESS_CAMOUFLAGE = False
 
 """Attack parameters"""
 BRIGHTNESS_LEVELS = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
 ATTACK_LR = 0.05
-MODEL_NAME = 'resnet101'
 HEATMAP_NAME = "corr_heatmap"
 VISUALIZE_HEATMAP_SAMPLES = True
 ATTACKED_PARAMS = ['shadows']

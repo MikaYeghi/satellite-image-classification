@@ -1,11 +1,15 @@
 import os
 import json
 import glob
+import torch
+import math
+import random
 from tqdm import tqdm
 from PIL import Image, ImageEnhance
 from torch.utils.data import Dataset
 from torchvision.transforms.functional import pil_to_tensor
-import random
+from kmeans_pytorch import kmeans
+from matplotlib import pyplot as plt
 
 import pdb
 
@@ -30,7 +34,7 @@ class SatelliteDataset(Dataset):
         positive_data_paths = [os.path.join(data_path, "positive") for data_path in data_paths]
         negative_data_paths = [os.path.join(data_path, "negative") for data_path in data_paths]
         formats_list = ['.jpg', '.png']
-        
+
         # Initialize the metadata list
         metadata = []
         
@@ -143,6 +147,9 @@ class SatelliteDataset(Dataset):
         
         return (total_pos, total_neg)
     
+    def shuffle(self):
+        random.shuffle(self.metadata)
+    
     def details(self):
         total_pos, total_neg = self.get_posneg_count()
         text = f"Positive: {total_pos}. Negative: {total_neg}."
@@ -158,3 +165,67 @@ class SatelliteDataset(Dataset):
                 data_['brightness'] = brightness
                 new_metadata.append(data_)
         self.metadata = new_metadata
+        
+    def KMeansAnalysis(self, K_max=5):
+        def AverageKMeansError(cluster_centers, cluster_idxs, pixels, num_classes, device='cuda'):
+            mean_error = torch.tensor(0, device=device, dtype=torch.float32)
+            n_pixels = len(pixels)
+            for k_idx in range(num_classes):
+                active_pixels = (cluster_idxs == k_idx).float().to(device)
+                mean_error += torch.sum(active_pixels * pixels.T)
+            mean_error /= n_pixels
+            return mean_error
+        
+        def SaveCenterColorsPlot(cluster_centers, save_dir):
+            # Get the number of clusters
+            n_centers = len(cluster_centers)
+            
+            # Get the number of rows and columns required
+            n_rows = round(math.sqrt(n_centers))
+            n_cols = math.ceil(n_centers / n_rows)
+            
+            # Plot the colors
+            fig, axs = plt.subplots(nrows=n_rows, ncols=n_cols, squeeze=False)
+
+            for i in range(n_rows):
+                for j in range(n_cols):
+                    idx = i * n_cols + j
+                    if idx >= n_centers:
+                        break
+                    axs[i][j].imshow(cluster_centers[idx].unsqueeze(0).unsqueeze(0))
+            fig.tight_layout()
+            fig.savefig(save_dir)
+            
+        def SaveCenterColorsTensor(cluster_centers, save_dir):
+            torch.save(cluster_centers, save_dir)
+        
+        assert K_max >= 2, "Number of clusters must be greater than 2."
+        print("Running K-means analysis.")
+        # Extract pixel values
+        print("Extracting pixel values...")
+        pixels = torch.empty(size=(0, 3), device=self.device)
+        for idx in tqdm(range(len(self.metadata))):
+            image, _ = self.__getitem__(idx)
+            pixels_ = image.permute(1, 2, 0).view(-1, 3)
+            pixels = torch.cat((pixels, pixels_))
+
+        # Perform K-means clustering
+        k_errors = []
+        cluster_idxs_list = []
+        cluster_centers_list = []
+        for k in range(2, K_max + 1):
+            print(f"K-means with {k} clusters.")
+            cluster_idxs, cluster_centers = kmeans(X=pixels, num_clusters=k, distance='euclidean', device=self.device)
+            mean_error = AverageKMeansError(cluster_centers, cluster_idxs, pixels, k, device=self.device)
+            
+            # Record the data
+            k_errors.append(mean_error.item())
+            cluster_idxs_list.append(cluster_idxs.clone())
+            cluster_centers_list.append(cluster_centers.clone())
+
+        # Save cluster colors
+        for cluster_centers in cluster_centers_list:
+            save_dir = f"results/cluster_centers_{len(cluster_centers)}.png"
+            SaveCenterColorsPlot(cluster_centers, save_dir)
+            save_dir = f"results/cluster_centers_{len(cluster_centers)}.pth"
+            SaveCenterColorsTensor(cluster_centers, save_dir)
