@@ -1,8 +1,7 @@
 import os
 
 """Dataset parameters"""
-# DATASET_NAMES = ['synthetic-diversified-1', 'adversarial-textures', 'adversarial-background', 'adversarial-shadows']
-DATASET_NAMES = ['pixelated-camouflage-centered-64']
+DATASET_NAMES = ['synthetic-diversified-1']
 TRAIN_PATH = []
 TEST_PATH = []
 if "real" in DATASET_NAMES:
@@ -47,9 +46,24 @@ if "pixelated-camouflage-centered-32" in DATASET_NAMES:
 if "pixelated-camouflage-centered-64" in DATASET_NAMES:
     TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-64/train")
     TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-64/test") 
+if "pixelated-random-camouflage-centered-8" in DATASET_NAMES:
+    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-8/train")
+    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-8/test")
+if "pixelated-random-camouflage-centered-16" in DATASET_NAMES:
+    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-16/train")
+    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-16/test")
+if "pixelated-random-camouflage-centered-32" in DATASET_NAMES:
+    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-32/train")
+    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-32/test")
+if "pixelated-random-camouflage-centered-64" in DATASET_NAMES:
+    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-64/train")
+    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-64/test")
+if "pixelated-random-camouflage-centered-16-lightened" in DATASET_NAMES:
+    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-16-light-intensity:0.5-1.0/train")
+    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-16-light-intensity:0.5-1.0/test")
 
 """Training and testing parameters"""
-NUM_GPUS = 1
+NUM_GPUS = 2
 if NUM_GPUS == 1:
     NUM_DATALOADER_WORKERS = 0
 else:
@@ -77,14 +91,18 @@ RAW_DATASET_SAVE_DIR = "/var/storage/myeghiaz/GSD-0.125m_sample-size-50"
 TRAIN_TEST_SPLIT_RATIO = 0.0
 
 """Dataset generation parameters"""
-SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-64"
+SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-16-proba"
 MESHES_DIR = "/home/myeghiaz/Storage/GAN-vehicles-1000"
-POSITIVE_LIMIT_TRAIN = None
-NEGATIVE_LIMIT_TRAIN = None
-POSITIVE_LIMIT_TEST = None
-NEGATIVE_LIMIT_TEST = None
+POSITIVE_LIMIT_TRAIN = 100
+NEGATIVE_LIMIT_TRAIN = 100
+POSITIVE_LIMIT_TEST = 5000
+NEGATIVE_LIMIT_TEST = 5000
 CAMOUFLAGE_TEXTURES_PATH = "/var/storage/myeghiaz/pixelated-camouflages/block-64"
-DRESS_CAMOUFLAGE = False
+DESCRIPTIVE_COLORS_PATH = "/home/myeghiaz/Storage/descriptive-colors-real-train-fraction-0.1"
+DRESS_CAMOUFLAGE = "random" # fixed - uses CAMOUFLAGE_TEXTURES_PATH, random - builds random camouflages from DESCRIPTIVE_COLORS_PATH, None - no camouflage augmentation is applied
+PIXELATION_BLOCK_SIZE = 16
+NUM_DESCRIPTIVE_COLORS = 10
+COLORS_PER_CAMOUFLAGE = 4
 
 """Attack parameters"""
 BRIGHTNESS_LEVELS = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]

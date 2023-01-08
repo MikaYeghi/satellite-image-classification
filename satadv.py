@@ -15,6 +15,8 @@ import numpy as np
 import math
 import seaborn as sn
 import shutil
+import torchvision.transforms.functional as F
+from torchvision.transforms import Resize
 from torchvision.transforms.functional import pil_to_tensor
 from PIL import Image
 
@@ -33,6 +35,7 @@ class SatAdv(nn.Module):
         self.model = create_model(cfg, device)
         self.meshes = self.load_meshes()
         self.camouflages = self.load_camouflages()
+        self.descriptive_colors = self.load_descriptive_colors()
         
         # Initialize parameters
         self.lights_direction = torch.tensor([0.0,-1.0,0.0], device=device, requires_grad=True).unsqueeze(0)
@@ -63,6 +66,9 @@ class SatAdv(nn.Module):
         return meshes
     
     def load_camouflages(self):
+        """
+        Loads camouflages from a given directory. The camouflages must be png files.
+        """
         camouflage_paths = glob.glob(self.cfg.CAMOUFLAGE_TEXTURES_PATH + "/*.png") # Textures must be png files
         camouflages = []
         k = 0
@@ -72,9 +78,31 @@ class SatAdv(nn.Module):
             camouflage = camouflage / 255. if camouflage.dtype == torch.uint8 else camouflage
             camouflage = camouflage.to(self.device)
             camouflages.append(camouflage)
-            save_image(camouflage, f"results/cam_{k}.jpg")
+            # save_image(camouflage, f"results/cam_{k}.jpg")
             k += 1
         return camouflages
+    
+    def load_descriptive_colors(self):
+        """
+        Load a list of descriptive colors. If no path of descriptive colors is given, None is returned.
+        If a path of descriptive colors is given, then this function loads a list of cluster centers (torch tensors). Each element of the list represents the color cluster centers coordinates for a different number of cluster centers.
+        The lengths of elements of the returned array are like the following:
+        [2, 3, 4, 5, ..., N]
+        where each number represents the number of cluster centers encoded in each element for a total number of N-1 centers.
+        """
+        # Load the path of the descriptive colors
+        descriptive_colors_path = self.cfg.DESCRIPTIVE_COLORS_PATH
+        
+        # No descriptive colors to load
+        if descriptive_colors_path is None:
+            return None
+        
+        cluster_centers_paths = glob.glob(descriptive_colors_path + "/*.pth")
+        cluster_centers_list = []
+        for cluster_centers_path in cluster_centers_paths:
+            cluster_centers = torch.load(cluster_centers_path)
+            cluster_centers_list.append(cluster_centers.clone())
+        return cluster_centers_list
     
     def render_synthetic_image(self, mesh, background_image):
         return self.renderer.render(mesh, 
@@ -88,6 +116,40 @@ class SatAdv(nn.Module):
     def dress_camouflage(self, mesh, camouflage):
         mesh.textures._maps_padded.data = camouflage.unsqueeze(0).permute(0, 2, 3, 1).clone().to(self.device)
         return mesh
+    
+    def generate_pixelated_camouflage(self, block_size):
+        assert 512 % block_size == 0, "512 is not divisible by the supplied block size."
+        assert self.cfg.NUM_DESCRIPTIVE_COLORS >= self.cfg.COLORS_PER_CAMOUFLAGE, f"Not enough descriptive colors to generate {self.cfg.COLORS_PER_CAMOUFLAGE}-color camouflages."
+        
+        # Load cluster centers if they are available
+        cluster_centers = None
+        if self.descriptive_colors is None:
+            raise ValueError("No descriptive colors loaded. Check descriptive colors loading.")
+        else:
+            for cluster_centers_ in self.descriptive_colors:
+                if len(cluster_centers_) == self.cfg.NUM_DESCRIPTIVE_COLORS:
+                    cluster_centers = cluster_centers_.clone()
+            if cluster_centers is None:
+                raise ValueError("Didn't find descriptive colors with the given number of clusters.")
+        
+        # Pick several random colors
+        cluster_centers = cluster_centers[torch.randperm(cluster_centers.shape[0])] # random.shuffle creates problems (repeated colors), using this instead
+        camouflage_colors = cluster_centers[:self.cfg.COLORS_PER_CAMOUFLAGE].to(self.device)
+        
+        # Generate the downsampled texture map
+        downsampled_size = 512 // block_size # 512 is the texture map size
+        camouflage = torch.empty((downsampled_size, downsampled_size, 3), device=self.device)
+        H, W = camouflage.shape[:2]
+        for h in range(H):
+            for w in range(W):
+                camouflage[h][w] = camouflage_colors[random.randint(0, self.cfg.COLORS_PER_CAMOUFLAGE - 1)]
+        
+        # Upscale
+        transform = Resize(512, interpolation=F.InterpolationMode.NEAREST)
+        camouflage = transform(camouflage.permute(2, 0, 1))
+        save_image(camouflage, "results/test.png")
+        
+        return camouflage
     
     def generate_synthetic_subset(self, dataset, dataset_type, meshes, positive_limit=None, negative_limit=None):
         print(f"Generating {dataset_type} synthetic dataset.")
@@ -140,15 +202,22 @@ class SatAdv(nn.Module):
             mesh = random.choice(meshes)
             
             # Change textures to camouflage
-            if self.cfg.DRESS_CAMOUFLAGE:
+            if self.cfg.DRESS_CAMOUFLAGE == 'fixed':
                 mesh = self.dress_camouflage(mesh, random.choice(self.camouflages))
+            elif self.cfg.DRESS_CAMOUFLAGE == 'random':
+                random_camouflage = self.generate_pixelated_camouflage(block_size=self.cfg.PIXELATION_BLOCK_SIZE)
+                mesh = self.dress_camouflage(mesh, random_camouflage)
+            elif self.cfg.DRESS_CAMOUFLAGE is None:
+                pass
+            else:
+                raise NotImplementedError
             # Positive class (i.e. with vehicle)
             # The numbers below were selected to make sure that the elevation is above 70 degrees
             distance = 5.0
             elevation, azimuth = sample_random_elev_azimuth(-1.287, -1.287, 1.287, 1.287, 5.0) 
             lights_direction = torch.tensor([random.uniform(-1, 1),-1.0,random.uniform(-1, 1)], device=self.device, requires_grad=True).unsqueeze(0)
             scaling_factor = random.uniform(0.70, 0.80)
-            intensity = random.uniform(0.0, 1.0)
+            intensity = random.uniform(0.5, 1.0)
             
             # Render and save the image
             synthetic_image = self.renderer.render(
