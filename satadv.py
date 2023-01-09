@@ -217,7 +217,7 @@ class SatAdv(nn.Module):
             elevation, azimuth = sample_random_elev_azimuth(-1.287, -1.287, 1.287, 1.287, 5.0) 
             lights_direction = torch.tensor([random.uniform(-1, 1),-1.0,random.uniform(-1, 1)], device=self.device, requires_grad=True).unsqueeze(0)
             scaling_factor = random.uniform(0.70, 0.80)
-            intensity = random.uniform(0.5, 1.0)
+            intensity = random.uniform(0.0, 1.0)
             
             # Render and save the image
             synthetic_image = self.renderer.render(
