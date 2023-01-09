@@ -99,7 +99,10 @@ def do_test(test_loader, model, evaluator):
         evaluator.plot_confmat()
 
         # Print the results
-        print(f"Accuracy: {round(100 * accuracy, 2)}%. F1-score: {round(100 * F1, 2)}%.")
+        results_text = f"Accuracy: {round(100 * accuracy, 2)}%. F1-score: {round(100 * F1, 2)}%."
+        print(results_text)
+        with open(os.path.join(cfg.OUTPUT_DIR, "results.txt"), 'w') as f:
+            f.write(results_text)
     
 if __name__ == '__main__':
     """Load the data set"""
