@@ -102,9 +102,24 @@ class SatelliteDataset(Dataset):
             self.metadata[idx]['brightness'] = brightness
         
     def leave_fraction_of_negatives(self, fraction):
+        """
+        This function randomly selects a subset of the dataset which will be retained, given the fraction of the dataset.
+        """
         assert fraction >= 0.0 and fraction <= 1.0
         total_pos, total_neg = self.get_posneg_count()
         keep_count = int(total_neg * fraction)
+        positives, negatives = self.get_posneg()
+        negatives = random.sample(negatives, keep_count)
+        self.build_metadata_from_posneg(positives, negatives)
+    
+    def leave_number_of_negatives(self, number):
+        """
+        This function randomly selects a subset of the dataset which will be retained, given the number of
+        images to be retained.
+        """
+        total_pos, total_neg = self.get_posneg_count()
+        assert number >= 0 and number <= total_neg
+        keep_count = number
         positives, negatives = self.get_posneg()
         negatives = random.sample(negatives, keep_count)
         self.build_metadata_from_posneg(positives, negatives)

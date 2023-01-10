@@ -38,6 +38,7 @@ print(attacker)
 
 """Loop through all possible negative samples"""
 idx = 0
+train_set.leave_number_of_negatives(cfg.NUM_ADV_IMGS)
 t = tqdm(train_set, desc="Pairs: 0")
 for background_image, label in tqdm(train_set):
     # Randomly select 1 mesh
@@ -52,8 +53,8 @@ for background_image, label in tqdm(train_set):
     
     t.set_description(f"Pairs: {attacker.get_num_pairs()}")
     
-    if attacker.get_num_pairs() >= cfg.NUM_ADV_IMGS:
-        break
+    # if attacker.get_num_pairs() >= cfg.NUM_ADV_IMGS:
+    #     break
     idx += 1
 
 attacker.save()
