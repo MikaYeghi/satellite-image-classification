@@ -1,7 +1,10 @@
 import torch
+import copy
 from random import uniform
 
 from utils import sample_random_elev_azimuth, get_lightdir_from_elaz
+
+import pdb
 
 class AttackedImage:
     def __init__(self, background_image, mesh, device='cuda'):
@@ -9,6 +12,7 @@ class AttackedImage:
         self.rendering_params = self.generate_rendering_params(background_image, mesh)
         self.original_image = None
         self.adversarial_image = None
+        self.adversarial_rendering_params = None
         
     def generate_rendering_params(self, background_image, mesh):
         # Camera pose
@@ -43,15 +47,23 @@ class AttackedImage:
         
     def set_adversarial_image(self, image):
         self.adversarial_image = image.clone().cpu()
+    
+    def set_adversarial_rendering_params(self, rendering_params):
+        self.adversarial_rendering_params = copy.deepcopy(rendering_params)
         
     def set_rendering_params(self, rendering_params):
-        self.rendering_params = rendering_params
+        self.rendering_params = copy.deepcopy(rendering_params)
     
     def get_original_image(self):
         return self.original_image
     
     def get_adversarial_image(self):
         return self.adversarial_image
+    
+    def get_texture_difference_image(self):
+        texture_difference = self.rendering_params['mesh'].textures._maps_padded - self.adversarial_rendering_params['mesh'].textures._maps_padded
+        texture_difference = torch.sqrt(torch.sum(torch.square(texture_difference), dim=3))[0]
+        return texture_difference
     
     def get_rendering_params(self):
         return self.rendering_params

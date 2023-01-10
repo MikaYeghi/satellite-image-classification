@@ -24,6 +24,7 @@ class FGSMAttacker:
         self.save_dir = save_dir
         Path(os.path.join(save_dir, "original")).mkdir(parents=True, exist_ok=True)
         Path(os.path.join(save_dir, "adversarial")).mkdir(parents=True, exist_ok=True)
+        Path(os.path.join(save_dir, "difference")).mkdir(parents=True, exist_ok=True)
         
         # torch.Tensor to PIL.Image converter
         self.converter = torchvision.transforms.ToPILImage()
@@ -161,6 +162,7 @@ class FGSMAttacker:
         ]
         
         # Attack the scene
+        from matplotlib import pyplot as plt
         k = 0
         while True:
             loss = torch.tensor(0, device=self.device)
@@ -182,10 +184,15 @@ class FGSMAttacker:
                 # The if-statement below saves the last randomly sampled image
                 if k == 0:
                     attacked_image.set_original_image(image[0])
-                
+                    attacked_image.set_rendering_params(rendering_params)
+                # plt.imshow(rendering_params['mesh'].textures._maps_padded[0].clone().detach().cpu().numpy())
+                # plt.savefig(f"results/tm_{k}.jpg")
+                # plt.close()
+                # pdb.set_trace()
                 # Run prediction on the image
                 pred = self.activation(self.model(image))
                 preds.append(pred.item())
+                # print(f"Mean pred: {sum(preds) / len(preds)}. Min pred: {min(preds)}")
                 
                 # Compute the unit loss
                 label_batched = torch.tensor([true_label], device=self.device, dtype=torch.float).unsqueeze(0)
@@ -195,7 +202,7 @@ class FGSMAttacker:
             # The if-statement below saves the last randomly sampled image with attacked parameters
             if min(preds) > 0.5:
                 attacked_image.set_adversarial_image(image[0])
-                attacked_image.set_rendering_params(rendering_params)
+                attacked_image.set_adversarial_rendering_params(rendering_params)
                 self.adversarial_examples_list.append(attacked_image)
                 break
 
@@ -221,18 +228,22 @@ class FGSMAttacker:
             # Retrieve the original and final images
             original_image = attacked_image.get_original_image()
             adversarial_image = attacked_image.get_adversarial_image()
+            texture_difference_image = attacked_image.get_texture_difference_image()
             
             # Save each image to the relevant folder
             original_save_path = os.path.join(self.save_dir, "original", f"image_{idx}.jpg")
             adversarial_save_path = os.path.join(self.save_dir, "adversarial", f"image_{idx}.jpg")
+            texture_difference_path = os.path.join(self.save_dir, "difference", f"image_{idx}.jpg")
             
             # Convert the images to PIL
             original_image = self.converter(original_image)
             adversarial_image = self.converter(adversarial_image)
+            texture_difference_image = self.converter(texture_difference_image)
             
             # Save the images with high quality
             original_image.save(original_save_path, quality=95)
             adversarial_image.save(adversarial_save_path, quality=95)
+            texture_difference_image.save(texture_difference_path, quality=95)
             
             idx += 1
             

@@ -238,7 +238,7 @@ class SatAdv(nn.Module):
     
     def generate_synthetic_dataset(self, train_set, test_set):
         # Sample the meshes into training and testing meshes
-        n_training_meshes = len(self.meshes) // 2
+        n_training_meshes = int(len(self.meshes) * self.cfg.TRAIN_MESHES_FRACTION)
         n_testing_meshes = len(self.meshes) - n_training_meshes
         train_meshes, test_meshes = random_unique_split(self.meshes, n_training_meshes, n_testing_meshes)
         

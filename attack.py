@@ -20,6 +20,12 @@ train_transform = transforms.get_train_transforms()
 train_set = SatelliteDataset(cfg.TRAIN_PATH, transform=train_transform, device=device)
 train_set.remove_positives()
 
+"""K-means analysis"""
+# train_set.remove_positives()
+# train_set.leave_fraction_of_negatives(0.1)
+# train_set.KMeansAnalysis(K_max=10)
+# exit()
+
 """Load the meshes"""
 meshes = load_meshes(cfg, shuffle_=True, device=device)
 
@@ -27,7 +33,7 @@ meshes = load_meshes(cfg, shuffle_=True, device=device)
 model = create_model(cfg, device)
 
 """Initialize the attacker"""
-attacker = FGSMAttacker(model, cfg.ATTACKED_PARAMS, cfg.ADVERSARIAL_SAVE_DIR)
+attacker = FGSMAttacker(model, cfg.ATTACKED_PARAMS, cfg.ADVERSARIAL_SAVE_DIR, epsilon=cfg.ATTACK_LR)
 print(attacker)
 
 """Loop through all possible negative samples"""
@@ -41,8 +47,8 @@ for background_image, label in tqdm(train_set):
     attacked_image = AttackedImage(background_image.clone(), mesh, device=device)
         
     # Generate the adversarial example
-    attacker.attack_single_image(attacked_image)
-    # attacker.EOT_attack_scene(attacked_image)
+    # attacker.attack_single_image(attacked_image)
+    attacker.EOT_attack_scene(attacked_image)
     
     t.set_description(f"Pairs: {attacker.get_num_pairs()}")
     
