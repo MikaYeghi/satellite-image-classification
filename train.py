@@ -114,8 +114,8 @@ if __name__ == '__main__':
     print(f"Train set. {train_set.details()}\nTest set. {test_set.details()}")
 
     """Create the dataloader"""
-    train_loader = DataLoader(train_set, batch_size=cfg.BATCH_SIZE, num_workers=cfg.NUM_DATALOADER_WORKERS)
-    test_loader = DataLoader(test_set, batch_size=cfg.BATCH_SIZE, num_workers=cfg.NUM_DATALOADER_WORKERS)
+    train_loader = DataLoader(train_set, batch_size=cfg.BATCH_SIZE, num_workers=cfg.NUM_DATALOADER_WORKERS, shuffle=cfg.SHUFFLE)
+    test_loader = DataLoader(test_set, batch_size=cfg.BATCH_SIZE, num_workers=cfg.NUM_DATALOADER_WORKERS, shuffle=cfg.SHUFFLE)
 
     """Initialize the model"""
     # model = create_model(cfg, device)

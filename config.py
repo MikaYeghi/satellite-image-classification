@@ -61,7 +61,9 @@ if "pixelated-random-camouflage-centered-64" in DATASET_NAMES:
 if "pixelated-random-camouflage-centered-16-lightened" in DATASET_NAMES:
     TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-16-light-intensity:0.5-1.0/train")
     TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-16-light-intensity:0.5-1.0/test")
-# TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Organic-Camouflage-Single-0.125m-50px/12/test")
+# TRAIN_PATH.append(f"/home/myeghiaz/Storage/SatClass-Adversarial-0.125m-50px/Textures-EOT-with-differences/1")
+# TRAIN_PATH.append(f"/home/myeghiaz/Storage/SatClass-Adversarial-0.125m-50px/Textures-EOT-with-differences/2")
+# TEST_PATH = [f"/home/myeghiaz/Storage/SatClass-Adversarial-0.125m-50px/Textures-EOT-with-differences/2"]
 
 """Training and testing parameters"""
 NUM_GPUS = 1
@@ -71,13 +73,13 @@ else:
     NUM_DATALOADER_WORKERS = 6
 BATCH_SIZE = 1024
 # MODEL_WEIGHTS = None
-MODEL_WEIGHTS = "saved_models/synthetic-augmented-vgg/model_final.pth"
+MODEL_WEIGHTS = "saved_models/synthetic-adversarial-vgg/2/model_final.pt"
 NUM_CLASSES = 1 # number of foreground classes
-LR = 0.0000001
-N_EPOCHS = 2
+LR = 0.000001
+N_EPOCHS = 10
 TEST_SIZE = 0.2
-VAL_FREQ = 1
-OUTPUT_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-Organic-Camouflage-Single-0.125m-50px/12"
+VAL_FREQ = 10
+OUTPUT_DIR = "saved_models/synthetic-adversarial-vgg/2"
 RESULTS_DIR = "results/"
 LOG_DIR = os.path.join(OUTPUT_DIR, "logs")
 EVAL_ONLY = True
@@ -85,6 +87,7 @@ FP_FN_analysis = True
 APPLY_TRAIN_TRANSFORMS = False
 MODEL_NAME = 'vgg16'
 FOCAL_LOSS = {"alpha": 0.1, "gamma": 2}
+SHUFFLE = True
 
 """Generating a train-test dataset from raw dataset"""
 RAW_DATASET_DIR = "/var/storage/myeghiaz/GSD-0.125m_sample-size-50_mean-sampling-freq-1"
@@ -93,7 +96,7 @@ TRAIN_TEST_SPLIT_RATIO = 0.0
 
 """Dataset generation parameters"""
 SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/testing"
-MESHES_DIR = "/home/myeghiaz/Storage/GAN-vehicles-1000"
+MESHES_DIR = "/home/myeghiaz/Storage/GAN-vehicles"
 TRAIN_MESHES_FRACTION = 0.8
 POSITIVE_LIMIT_TRAIN = 10
 NEGATIVE_LIMIT_TRAIN = 10
@@ -112,5 +115,5 @@ ATTACK_LR = 0.1
 HEATMAP_NAME = "corr_heatmap"
 VISUALIZE_HEATMAP_SAMPLES = True
 ATTACKED_PARAMS = ['textures']
-ADVERSARIAL_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Adversarial-Textures-EOT-with-differences-0.125m-50px"
-NUM_ADV_IMGS = 100 # Number of adversarial images that will be generated during the attack
+ADVERSARIAL_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Adversarial-0.125m-50px/Textures-EOT-with-differences/3"
+NUM_ADV_IMGS = 1 # Number of adversarial images that will be generated during the attack
