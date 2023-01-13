@@ -23,13 +23,14 @@ class FGSMAttacker:
         # Create the save directories
         self.save_dir = save_dir
         Path(os.path.join(save_dir, "original")).mkdir(parents=True, exist_ok=True)
-        Path(os.path.join(save_dir, "adversarial")).mkdir(parents=True, exist_ok=True)
+        Path(os.path.join(save_dir, "positive")).mkdir(parents=True, exist_ok=True)
+        Path(os.path.join(save_dir, "negative")).mkdir(parents=True, exist_ok=True)
         Path(os.path.join(save_dir, "difference")).mkdir(parents=True, exist_ok=True)
         
         # torch.Tensor to PIL.Image converter
         self.converter = torchvision.transforms.ToPILImage()
         
-        # List which stored AttackedImage variables
+        # List which stores AttackedImage variables
         self.adversarial_examples_list = []
         
         # Set up the model
@@ -60,6 +61,7 @@ class FGSMAttacker:
                 intensity=rendering_params['intensity'],
                 ambient_color=rendering_params['ambient_color']
             ).permute(2, 0, 1).unsqueeze(0)
+            # image = torch.clip(image, min=0.0, max=1.0)
             
             if k == 0:
                 attacked_image.set_original_image(image[0].clone())
@@ -97,6 +99,9 @@ class FGSMAttacker:
             if param == 'textures':
                 # Collect the element-wise sign of the data gradient
                 sign_grad = rendering_params['mesh'].textures.maps_padded().grad.data.sign()
+                
+                sign_grad = sign_grad + extra_grad
+                
                 # Perturb the data
                 rendering_params['mesh'].textures.maps_padded().data = rendering_params['mesh'].textures.maps_padded().data + self.epsilon * sign_grad
             elif param == 'mesh':
@@ -151,7 +156,7 @@ class FGSMAttacker:
         # Set the model to eval mode following the PyTorch tutorial for adversarial attacks
         self.model.eval()
         self.model.zero_grad()
-        
+        # pdb.set_trace()
         # Sample transformations
         rendering_params_list = [
             attacked_image.generate_rendering_params(attacked_image.get_background_image(), attacked_image.get_mesh()) for _ in range(N_transforms)
@@ -180,14 +185,17 @@ class FGSMAttacker:
                     intensity=rendering_params['intensity'],
                     ambient_color=rendering_params['ambient_color']
                 ).permute(2, 0, 1).unsqueeze(0)
+                image = torch.clip(image, min=0.0, max=1.0)
                 
                 # The if-statement below saves the last randomly sampled image
                 if k == 0:
                     attacked_image.set_original_image(image[0])
                     attacked_image.set_rendering_params(rendering_params)
-                # plt.imshow(rendering_params['mesh'].textures._maps_padded[0].clone().detach().cpu().numpy())
-                # plt.savefig(f"results/tm_{k}.jpg")
-                # plt.close()
+                # if k % 100 == 0:
+                #     # plt.imshow(rendering_params['mesh'].textures._maps_padded[0].clone().detach().cpu().numpy())
+                #     plt.imshow(image[0].permute(1, 2, 0).clone().detach().cpu().numpy())
+                #     plt.savefig(f"results/tm_{k}.jpg")
+                #     plt.close()
                 # pdb.set_trace()
                 # Run prediction on the image
                 pred = self.activation(self.model(image))
@@ -200,6 +208,7 @@ class FGSMAttacker:
                 
             # Attack stops if the minimum prediction confidence goes beyond the threshold
             # The if-statement below saves the last randomly sampled image with attacked parameters
+            print(min(preds))
             if min(preds) > 0.5:
                 attacked_image.set_adversarial_image(image[0])
                 attacked_image.set_adversarial_rendering_params(rendering_params)
@@ -232,7 +241,7 @@ class FGSMAttacker:
             
             # Save each image to the relevant folder
             original_save_path = os.path.join(self.save_dir, "original", f"image_{idx}.jpg")
-            adversarial_save_path = os.path.join(self.save_dir, "adversarial", f"image_{idx}.jpg")
+            adversarial_save_path = os.path.join(self.save_dir, "positive", f"image_{idx}.jpg")
             texture_difference_path = os.path.join(self.save_dir, "difference", f"image_{idx}.jpg")
             
             # Convert the images to PIL

@@ -6,7 +6,7 @@ from pytorch3d.renderer import TexturesUV
 from dataset import SatelliteDataset
 from attacker import FGSMAttacker
 from transforms import SatTransforms
-from utils import load_meshes, create_model
+from utils import load_meshes, create_model, load_checkpoint
 from attacked_image import AttackedImage
 
 import config as cfg
@@ -27,10 +27,11 @@ train_set.remove_positives()
 # exit()
 
 """Load the meshes"""
-meshes = load_meshes(cfg, shuffle_=True, device=device)
+meshes = load_meshes(cfg, shuffle_=True, device='cpu')
 
 """Initialize the model"""
-model = create_model(cfg, device)
+# model = create_model(cfg, device)
+_, _, model = load_checkpoint(cfg, device)
 
 """Initialize the attacker"""
 attacker = FGSMAttacker(model, cfg.ATTACKED_PARAMS, cfg.ADVERSARIAL_SAVE_DIR, epsilon=cfg.ATTACK_LR)
@@ -42,7 +43,7 @@ train_set.leave_number_of_negatives(cfg.NUM_ADV_IMGS)
 t = tqdm(train_set, desc="Pairs: 0")
 for background_image, label in tqdm(train_set):
     # Randomly select 1 mesh
-    mesh = random.choice(meshes)
+    mesh = random.choice(meshes).clone().to(device)
     
     # Initialize random initial rendering parameters
     attacked_image = AttackedImage(background_image.clone(), mesh, device=device)
