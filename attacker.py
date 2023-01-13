@@ -100,8 +100,6 @@ class FGSMAttacker:
                 # Collect the element-wise sign of the data gradient
                 sign_grad = rendering_params['mesh'].textures.maps_padded().grad.data.sign()
                 
-                sign_grad = sign_grad + extra_grad
-                
                 # Perturb the data
                 rendering_params['mesh'].textures.maps_padded().data = rendering_params['mesh'].textures.maps_padded().data + self.epsilon * sign_grad
             elif param == 'mesh':
