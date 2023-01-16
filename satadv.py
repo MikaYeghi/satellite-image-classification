@@ -69,7 +69,11 @@ class SatAdv(nn.Module):
         """
         Loads camouflages from a given directory. The camouflages must be png files.
         """
-        camouflage_paths = glob.glob(self.cfg.CAMOUFLAGE_TEXTURES_PATH + "/*.png") # Textures must be png files
+        if self.cfg.DRESS_CAMOUFLAGE == 'fixed':
+            glob_search = self.cfg.CAMOUFLAGE_TEXTURES_PATH + "/*.png"
+        elif self.cfg.DRESS_CAMOUFLAGE == 'organic':
+            glob_search = self.cfg.CAMOUFLAGE_TEXTURES_PATH + "/*/negative/*.png"
+        camouflage_paths = glob.glob(glob_search) # Textures must be png files
         camouflages = []
         k = 0
         for camouflage_path in camouflage_paths:
@@ -147,9 +151,49 @@ class SatAdv(nn.Module):
         # Upscale
         transform = Resize(512, interpolation=F.InterpolationMode.NEAREST)
         camouflage = transform(camouflage.permute(2, 0, 1))
-        save_image(camouflage, "results/test.png")
+        # save_image(camouflage, "results/test.png")
         
         return camouflage
+    
+    def generate_random_organic_camouflage(self):
+        # Number of clusters for each camouflage
+        camouflage_n_centers = [4, 4, 5, 4, 4, 4, 4, 4, 5, 4, 4, 4]
+        
+        # Select a random camouflage
+        camouflage_idx = random.randint(1, 12)
+        n_centers = camouflage_n_centers[camouflage_idx - 1]
+        camouflage_path = os.path.join(self.cfg.CAMOUFLAGE_TEXTURES_PATH, f"Cam-{camouflage_idx}", "negative", f"Camouflage-{camouflage_idx}.png")
+        camouflage = Image.open(camouflage_path).convert("RGB")
+        camouflage = pil_to_tensor(camouflage)[:3, ...]
+        camouflage = camouflage / 255. if camouflage.dtype == torch.uint8 else camouflage
+        camouflage = camouflage.permute(1, 2, 0)
+        camouflage = camouflage.to(self.device)
+        
+        # Load original cluster centers
+        centers_path = os.path.join(self.cfg.CAMOUFLAGE_TEXTURES_PATH, f"Cam-{camouflage_idx}", "results", f"cluster_centers_{n_centers}.pth")
+        cluster_centers = torch.from_numpy(torch.load(centers_path)).float().to(self.device)
+        
+        # Load new cluster centers
+        new_centers_path = "/home/myeghiaz/Storage/descriptive-colors-real-train-fraction-0.1/cluster_centers_10.pth"
+        new_cluster_centers = torch.load(new_centers_path).to(self.device)
+        new_cluster_centers = new_cluster_centers[torch.randperm(new_cluster_centers.shape[0])]
+        new_cluster_centers = new_cluster_centers[:n_centers]
+        
+        # Find the closest original cluster indices
+        distances = torch.cdist(camouflage.float().view(-1, 3), cluster_centers.float().view(-1, 3))
+        indices = torch.argmin(distances, dim=1).resize(512, 512)
+        
+        # Construct a new texture map
+        new_camouflage = torch.empty((512, 512, 3))
+        for i in range(indices.shape[0]):
+            for j in range(indices.shape[1]):
+                new_camouflage[i][j] = new_cluster_centers[indices[i][j]]
+        new_camouflage = new_camouflage.permute(2,0,1)
+        
+        # save_image(camouflage.permute(2, 0, 1), "results/original.png")
+        # save_image(new_camouflage.permute(2, 0, 1), "results/new.png")
+        
+        return new_camouflage
     
     def generate_synthetic_subset(self, dataset, dataset_type, meshes, positive_limit=None, negative_limit=None):
         print(f"Generating {dataset_type} synthetic dataset.")
@@ -207,6 +251,9 @@ class SatAdv(nn.Module):
             elif self.cfg.DRESS_CAMOUFLAGE == 'random':
                 random_camouflage = self.generate_pixelated_camouflage(block_size=self.cfg.PIXELATION_BLOCK_SIZE)
                 mesh = self.dress_camouflage(mesh, random_camouflage)
+            elif self.cfg.DRESS_CAMOUFLAGE == 'organic':
+                organic_random_camouflage = self.generate_random_organic_camouflage()
+                mesh = self.dress_camouflage(mesh, organic_random_camouflage)
             elif self.cfg.DRESS_CAMOUFLAGE is None:
                 pass
             else:

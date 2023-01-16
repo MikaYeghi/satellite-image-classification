@@ -1,7 +1,8 @@
 import os
+shape_code = "x1.3z1.3"
 
 """Dataset parameters"""
-DATASET_NAMES = ['real']
+DATASET_NAMES = ['organic-recolored-camouflage-centered']
 TRAIN_PATH = []
 TEST_PATH = []
 if "real" in DATASET_NAMES:
@@ -61,9 +62,13 @@ if "pixelated-random-camouflage-centered-64" in DATASET_NAMES:
 if "pixelated-random-camouflage-centered-16-lightened" in DATASET_NAMES:
     TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-16-light-intensity:0.5-1.0/train")
     TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-16-light-intensity:0.5-1.0/test")
-# TRAIN_PATH.append(f"/home/myeghiaz/Storage/SatClass-Adversarial-0.125m-50px/Textures-EOT-with-differences/1")
-# TRAIN_PATH.append(f"/home/myeghiaz/Storage/SatClass-Adversarial-0.125m-50px/Textures-EOT-with-differences/2")
-# TEST_PATH = [f"/home/myeghiaz/Storage/SatClass-Adversarial-0.125m-50px/Textures-EOT-with-differences/2"]
+if "organic-recolored-camouflage-centered" in DATASET_NAMES:
+    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Organic-Recolored-Camouflages-0.125m-50px/train")
+    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Organic-Recolored-Camouflages-0.125m-50px/test")
+if "modified-shapes" in DATASET_NAMES:
+    TRAIN_PATH.append(f"/home/myeghiaz/Storage/modified-shape-datasets/SatClass-Synthetic-Modified-Shapes-0.125m-50px/{shape_code}/train")
+    TEST_PATH.append(f"/home/myeghiaz/Storage/modified-shape-datasets/SatClass-Synthetic-Modified-Shapes-0.125m-50px/{shape_code}/test")
+# TRAIN_PATH.append("/home/myeghiaz/Storage/organic-camouflages-dataset-style/Cam-1")
 
 """Training and testing parameters"""
 NUM_GPUS = 1
@@ -73,13 +78,14 @@ else:
     NUM_DATALOADER_WORKERS = 6
 BATCH_SIZE = 1024
 # MODEL_WEIGHTS = None
-MODEL_WEIGHTS = "saved_models/synthetic-adversarial-vgg/2/model_final.pt"
+MODEL_WEIGHTS = "saved_models/synthetic-augmented-vgg/model_final.pth"
 NUM_CLASSES = 1 # number of foreground classes
 LR = 0.000001
 N_EPOCHS = 10
 TEST_SIZE = 0.2
 VAL_FREQ = 10
-OUTPUT_DIR = "saved_models/synthetic-adversarial-vgg/2"
+# OUTPUT_DIR = f"/home/myeghiaz/Storage/modified-shape-datasets/results/{shape_code}"
+OUTPUT_DIR = "output/"
 RESULTS_DIR = "results/"
 LOG_DIR = os.path.join(OUTPUT_DIR, "logs")
 EVAL_ONLY = True
@@ -95,16 +101,17 @@ RAW_DATASET_SAVE_DIR = "/var/storage/myeghiaz/GSD-0.125m_sample-size-50"
 TRAIN_TEST_SPLIT_RATIO = 0.0
 
 """Dataset generation parameters"""
-SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/testing"
+SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-Organic-Recolored-Camouflages-0.125m-50px"
 MESHES_DIR = "/home/myeghiaz/Storage/GAN-vehicles"
+# MESHES_DIR = f"/home/myeghiaz/Storage/modified-shape-datasets/datasets-xz/{shape_code}"
 TRAIN_MESHES_FRACTION = 0.8
 POSITIVE_LIMIT_TRAIN = 10
 NEGATIVE_LIMIT_TRAIN = 10
-POSITIVE_LIMIT_TEST = None
-NEGATIVE_LIMIT_TEST = None
-CAMOUFLAGE_TEXTURES_PATH = "/var/storage/myeghiaz/organic-camouflages/Camouflage"
+POSITIVE_LIMIT_TEST = 1000
+NEGATIVE_LIMIT_TEST = 1000
+CAMOUFLAGE_TEXTURES_PATH = "/home/myeghiaz/Storage/organic-camouflages-dataset-style"
 DESCRIPTIVE_COLORS_PATH = "/home/myeghiaz/Storage/descriptive-colors-real-train-fraction-0.1"
-DRESS_CAMOUFLAGE = None # fixed - uses CAMOUFLAGE_TEXTURES_PATH, random - builds random camouflages from DESCRIPTIVE_COLORS_PATH, None - no camouflage augmentation is applied
+DRESS_CAMOUFLAGE = 'organic' # fixed - uses CAMOUFLAGE_TEXTURES_PATH, random - builds random camouflages from DESCRIPTIVE_COLORS_PATH, 'organic' - load organic camouflages and replace their colors with colors from the dataset, None - no camouflage augmentation is applied
 PIXELATION_BLOCK_SIZE = 16
 NUM_DESCRIPTIVE_COLORS = 10
 COLORS_PER_CAMOUFLAGE = 4
