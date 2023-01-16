@@ -10,6 +10,10 @@ from torch.utils.data import Dataset
 from torchvision.transforms.functional import pil_to_tensor
 from kmeans_pytorch import kmeans
 from matplotlib import pyplot as plt
+from sklearn.cluster import KMeans
+from pathlib import Path
+
+import config as cfg
 
 import pdb
 
@@ -207,15 +211,25 @@ class SatelliteDataset(Dataset):
                     idx = i * n_cols + j
                     if idx >= n_centers:
                         break
-                    axs[i][j].imshow(cluster_centers[idx].unsqueeze(0).unsqueeze(0))
+                    axs[i][j].imshow([[cluster_centers[idx]]])
             fig.tight_layout()
             fig.savefig(save_dir)
             
         def SaveCenterColorsTensor(cluster_centers, save_dir):
             torch.save(cluster_centers, save_dir)
         
+        def SaveErrorsPlot(k_errors, K_max, save_dir):
+            plt.close()
+            fig = plt.figure()
+            plt.plot(range(2, K_max + 1), k_errors, 'b')
+            plt.xlabel("# of clusters")
+            plt.ylabel("Error")
+            plt.title("Error vs # of clusters")
+            plt.savefig(save_dir)
+        
         assert K_max >= 2, "Number of clusters must be greater than 2."
         print("Running K-means analysis.")
+        
         # Extract pixel values
         print("Extracting pixel values...")
         pixels = torch.empty(size=(0, 3), device=self.device)
@@ -230,17 +244,32 @@ class SatelliteDataset(Dataset):
         cluster_centers_list = []
         for k in range(2, K_max + 1):
             print(f"K-means with {k} clusters.")
-            cluster_idxs, cluster_centers = kmeans(X=pixels, num_clusters=k, distance='euclidean', device=self.device)
-            mean_error = AverageKMeansError(cluster_centers, cluster_idxs, pixels, k, device=self.device)
+            km = KMeans(init="random", n_clusters=k, n_init=10, max_iter=300, tol=1e-04, random_state=0, verbose=0)
+            cluster_idxs = km.fit_predict(pixels.cpu())
+            cluster_centers = km.cluster_centers_
+            mean_error = km.inertia_
             
             # Record the data
-            k_errors.append(mean_error.item())
-            cluster_idxs_list.append(cluster_idxs.clone())
-            cluster_centers_list.append(cluster_centers.clone())
+            k_errors.append(mean_error)
+            cluster_idxs_list.append(cluster_idxs)
+            cluster_centers_list.append(cluster_centers)
 
+        # Extract the error gradients
+        error_gradients = []
+        for i in range(0, len(k_errors) - 1):
+            change = k_errors[i + 1] - k_errors[i]
+            error_gradients.append(-change)
+        
         # Save cluster colors
+        Path(cfg.RESULTS_DIR).mkdir(parents=True, exist_ok=True)
         for cluster_centers in cluster_centers_list:
-            save_dir = f"results/cluster_centers_{len(cluster_centers)}.png"
+            save_dir = os.path.join(cfg.RESULTS_DIR, f"cluster_centers_{len(cluster_centers)}.png")
             SaveCenterColorsPlot(cluster_centers, save_dir)
-            save_dir = f"results/cluster_centers_{len(cluster_centers)}.pth"
+            save_dir = os.path.join(cfg.RESULTS_DIR, f"cluster_centers_{len(cluster_centers)}.pth")
             SaveCenterColorsTensor(cluster_centers, save_dir)
+        
+        # Save errors plot
+        save_dir = os.path.join(cfg.RESULTS_DIR, "k_errors.png")
+        SaveErrorsPlot(k_errors, K_max, save_dir)
+        save_dir = os.path.join(cfg.RESULTS_DIR, "error_gradients.png")
+        SaveErrorsPlot(error_gradients, K_max - 1, save_dir)
