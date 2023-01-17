@@ -2,6 +2,7 @@ import os
 import glob
 import math
 import shutil
+import pickle
 from torch import nn
 from matplotlib import pyplot as plt
 import torch
@@ -152,6 +153,60 @@ def get_lightdir_from_elaz(elev, azim, device='cuda'):
     z = -math.cos(math.radians(elev)) * math.cos(math.radians(azim))
     xyz = torch.tensor([x, y, z], device=device).unsqueeze(0)
     return xyz
+
+def generate_dataset_from_raw(dataset_dir, save_dir):
+    """
+    This function converts a dataset with vehicle location annotations (basically, a detection dataset) into a 
+    classification dataset. Images which contain at least one sample of the "small vehicle" are marked as positive,
+    while all other images are marked as negative.
+    """
+    # Extract images and annotations names
+    annotations_dir = os.path.join(dataset_dir, "annotations")
+    images_dir = os.path.join(dataset_dir, "images")
+    annotation_files = [annotation_file.split('/')[-1] for annotation_file in glob.glob(annotations_dir + "/*.pkl")]
+    
+    # Create the save directories
+    trainpos_dir = os.path.join(save_dir, "train", "positive")
+    trainneg_dir = os.path.join(save_dir, "train", "negative")
+    testpos_dir = os.path.join(save_dir, "test", "positive")
+    testneg_dir = os.path.join(save_dir, "test", "negative")
+    Path(trainpos_dir).mkdir(parents=True, exist_ok=True)
+    Path(trainneg_dir).mkdir(parents=True, exist_ok=True)
+    Path(testpos_dir).mkdir(parents=True, exist_ok=True)
+    Path(testneg_dir).mkdir(parents=True, exist_ok=True)
+    
+    # Sort the images into 4 categories: train/test positive/negative (2*2=4). Copy correspondingly.
+    print("Generating the classification dataset...")
+    for annotation_file in tqdm(annotation_files):
+        # Get the file paths
+        image_file = annotation_file.split('.')[0] + ".jpg"
+        annotation_path = os.path.join(dataset_dir, "annotations", annotation_file)
+        image_path = os.path.join(dataset_dir, "images", image_file)
+        
+        # Load the annotations
+        with open(annotation_path, 'rb') as f:
+            annotations = pickle.load(f)
+        
+        # Is it positive/negative? Is it train/test?
+        is_positive = False
+        is_test = False
+        if len(annotations['object_locations']['small'][0]) > 0:
+            is_positive = True
+        if annotation_file.split('_')[0] == "0001":
+            is_test = True
+        
+        # Copy the image
+        if is_positive and is_test:
+            save_path = testpos_dir
+        elif not is_positive and is_test:
+            save_path = testneg_dir
+        elif is_positive and not is_test:
+            save_path = trainpos_dir
+        else:
+            save_path = trainneg_dir
+        shutil.copy(image_path, save_path)
+    
+    print("Dataset generation finished!")
 
 def generate_train_test(dataset_dir, save_dir, split_ratio=0.8):
     """

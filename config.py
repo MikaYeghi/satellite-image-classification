@@ -96,13 +96,13 @@ FOCAL_LOSS = {"alpha": 0.1, "gamma": 2}
 SHUFFLE = True
 
 """Generating a train-test dataset from raw dataset"""
-RAW_DATASET_DIR = "/var/storage/myeghiaz/GSD-0.125m_sample-size-50_mean-sampling-freq-1"
-RAW_DATASET_SAVE_DIR = "/var/storage/myeghiaz/GSD-0.125m_sample-size-50"
+RAW_DATASET_DIR = "/home/myeghiaz/Storage/GSD-0.125m_sample-size-50_mean-sampling-freq-1"
+RAW_DATASET_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Real-non-centered-0.125m-50px-no-margin"
 TRAIN_TEST_SPLIT_RATIO = 0.0
 
 """Dataset generation parameters"""
 SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-Organic-Recolored-Camouflages-0.125m-50px"
-MESHES_DIR = "/home/myeghiaz/Storage/GAN-vehicles"
+MESHES_DIR = "/var/storage/myeghiaz/GAN-vehicles"
 # MESHES_DIR = f"/home/myeghiaz/Storage/modified-shape-datasets/datasets-xz/{shape_code}"
 TRAIN_MESHES_FRACTION = 0.8
 POSITIVE_LIMIT_TRAIN = 10
