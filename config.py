@@ -2,7 +2,7 @@ import os
 shape_code = "x1.3z1.3"
 
 """Dataset parameters"""
-DATASET_NAMES = ['synthetic']
+DATASET_NAMES = ['non-centered-no-margin']
 TRAIN_PATH = []
 TEST_PATH = []
 if "real" in DATASET_NAMES:
@@ -78,24 +78,24 @@ NUM_GPUS = 2
 if NUM_GPUS == 1:
     NUM_DATALOADER_WORKERS = 0
 else:
-    NUM_DATALOADER_WORKERS = 6
+    NUM_DATALOADER_WORKERS = 8
 BATCH_SIZE = 1024
 MODEL_WEIGHTS = None
-# MODEL_WEIGHTS = "saved_models/synthetic-augmented-vgg/model_final.pth"
+# MODEL_WEIGHTS = "saved_models/non-centered-no-margin-baseline/model_final.pt"
 NUM_CLASSES = 1 # number of foreground classes
 LR = 0.000001
 N_EPOCHS = 5
 TEST_SIZE = 0.2
 VAL_FREQ = 1
 # OUTPUT_DIR = f"/home/myeghiaz/Storage/modified-shape-datasets/results/{shape_code}"
-OUTPUT_DIR = "saved_models/non-centered-no-margin-baseline/"
+OUTPUT_DIR = "saved_models/non-centered-no-margin-weighted/"
 RESULTS_DIR = "results/"
 LOG_DIR = os.path.join(OUTPUT_DIR, "logs")
 EVAL_ONLY = False
 FP_FN_analysis = True
 APPLY_TRAIN_TRANSFORMS = False
 MODEL_NAME = 'vgg16'
-FOCAL_LOSS = {"alpha": 0.1, "gamma": 2}
+FOCAL_LOSS = {"alpha": 0.2, "gamma": 2}
 SHUFFLE = True
 
 """Generating a train-test dataset from raw dataset"""
