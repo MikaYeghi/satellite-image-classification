@@ -22,12 +22,14 @@ def FocalLoss(
         if alpha >= 0:
             alpha_t = alpha * targets + (1 - alpha) * (1 - targets)
             loss = alpha_t * loss
-
+        
         if reduction == "mean":
             loss = loss.mean()
         elif reduction == "sum":
             loss = loss.sum()
-
+        else:
+            loss = loss.sum()
+        
         return loss
 
     return FocalLoss_
