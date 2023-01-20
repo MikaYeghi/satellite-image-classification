@@ -2,7 +2,7 @@ import os
 shape_code = "x1.3z1.3"
 
 """Dataset parameters"""
-DATASET_NAMES = ['non-centered-no-margin']
+DATASET_NAMES = ['synthetic-non-centered-no-margin']
 TRAIN_PATH = []
 TEST_PATH = []
 if "real" in DATASET_NAMES:
@@ -29,6 +29,9 @@ if "stan-without-shadows" in DATASET_NAMES:
 if "non-centered-no-margin" in DATASET_NAMES:
     TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Real-non-centered-0.125m-50px-no-margin/train")
     TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Real-non-centered-0.125m-50px-no-margin/test")
+if "synthetic-non-centered-no-margin" in DATASET_NAMES:
+    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-non-centered-0.125m-50px/train")
+    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-non-centered-0.125m-50px/test")
 if "adversarial-textures" in DATASET_NAMES:
     TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Adversarial-Textures-0.125m-50px")
 if "adversarial-background" in DATASET_NAMES:
@@ -74,7 +77,7 @@ if "modified-shapes" in DATASET_NAMES:
 # TRAIN_PATH.append("/home/myeghiaz/Storage/organic-camouflages-dataset-style/Cam-1")
 
 """Training and testing parameters"""
-NUM_GPUS = 2
+NUM_GPUS = 1
 if NUM_GPUS == 1:
     NUM_DATALOADER_WORKERS = 0
 else:
@@ -84,18 +87,18 @@ MODEL_WEIGHTS = None
 # MODEL_WEIGHTS = "saved_models/non-centered-no-margin-baseline/model_final.pt"
 NUM_CLASSES = 1 # number of foreground classes
 LR = 0.000001
-N_EPOCHS = 5
+N_EPOCHS = 2
 TEST_SIZE = 0.2
 VAL_FREQ = 1
 # OUTPUT_DIR = f"/home/myeghiaz/Storage/modified-shape-datasets/results/{shape_code}"
-OUTPUT_DIR = "saved_models/non-centered-no-margin-weighted/"
+OUTPUT_DIR = "saved_models/synthetic-non-centered-no-margin-weighted/"
 RESULTS_DIR = "results/"
 LOG_DIR = os.path.join(OUTPUT_DIR, "logs")
 EVAL_ONLY = False
 FP_FN_analysis = True
 APPLY_TRAIN_TRANSFORMS = False
 MODEL_NAME = 'vgg16'
-FOCAL_LOSS = {"alpha": 0.2, "gamma": 2}
+FOCAL_LOSS = {"alpha": 0.8, "gamma": 2}
 SHUFFLE = True
 
 """Generating a train-test dataset from raw dataset"""
@@ -104,15 +107,14 @@ RAW_DATASET_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Real-non-centered-0.125m
 TRAIN_TEST_SPLIT_RATIO = 0.0
 
 """Dataset generation parameters"""
-SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-Organic-Recolored-Camouflages-0.125m-50px"
-MESHES_DIR = "/var/storage/myeghiaz/GAN-vehicles"
-# MESHES_DIR = f"/home/myeghiaz/Storage/modified-shape-datasets/datasets-xz/{shape_code}"
+SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-non-centered-0.125m-50px"
+MESHES_DIR = "/var/storage/myeghiaz/GAN-vehicles-1000"
 TRAIN_MESHES_FRACTION = 0.8
-POSITIVE_LIMIT_TRAIN = 10
-NEGATIVE_LIMIT_TRAIN = 10
-POSITIVE_LIMIT_TEST = 1000
-NEGATIVE_LIMIT_TEST = 1000
-CAMOUFLAGE_TEXTURES_PATH = "/home/myeghiaz/Storage/organic-camouflages-dataset-style"
+POSITIVE_LIMIT_TRAIN = None
+NEGATIVE_LIMIT_TRAIN = None
+POSITIVE_LIMIT_TEST = None
+NEGATIVE_LIMIT_TEST = None
+CAMOUFLAGE_TEXTURES_PATH = None
 DESCRIPTIVE_COLORS_PATH = "/home/myeghiaz/Storage/descriptive-colors-real-train-fraction-0.1/cluster_centers_5.pth"
 DRESS_CAMOUFLAGE = None # fixed - uses CAMOUFLAGE_TEXTURES_PATH, random - builds random camouflages from DESCRIPTIVE_COLORS_PATH, 'organic' - load organic camouflages and replace their colors with colors from the dataset, None - no camouflage augmentation is applied
 PIXELATION_BLOCK_SIZE = 16

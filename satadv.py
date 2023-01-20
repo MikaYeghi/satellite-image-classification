@@ -4,6 +4,7 @@ from torch import nn
 import torchvision.models as models
 import glob
 from pytorch3d.io import load_objs_as_meshes
+from pytorch3d.transforms import euler_angles_to_matrix
 from torch.nn import BCELoss
 from matplotlib import pyplot as plt
 import random
@@ -73,6 +74,8 @@ class SatAdv(nn.Module):
             glob_search = self.cfg.CAMOUFLAGE_TEXTURES_PATH + "/*.png"
         elif self.cfg.DRESS_CAMOUFLAGE == 'organic':
             glob_search = self.cfg.CAMOUFLAGE_TEXTURES_PATH + "/*/negative/*.png"
+        else:
+            return None
         camouflage_paths = glob.glob(glob_search) # Textures must be png files
         camouflages = []
         k = 0
@@ -297,6 +300,117 @@ class SatAdv(nn.Module):
         
         self.generate_synthetic_subset(train_set, "train", train_meshes, positive_limit=self.cfg.POSITIVE_LIMIT_TRAIN, negative_limit=self.cfg.NEGATIVE_LIMIT_TRAIN)
         self.generate_synthetic_subset(test_set, "test", test_meshes, positive_limit=self.cfg.POSITIVE_LIMIT_TEST, negative_limit=self.cfg.NEGATIVE_LIMIT_TEST)
+    
+    def randomly_move_and_rotate_meshes(self, mesh, scaling_factor, positive_counter):
+        # Apply random rotation
+        mesh_rotation = euler_angles_to_matrix(torch.tensor([0, random.uniform(0, 2 * math.pi), 0]), convention="XYZ").to(self.device)
+        mesh_rotation = torch.matmul(mesh_rotation, mesh.verts_packed().data.T).T - mesh.verts_packed()
+        mesh.offset_verts_(vert_offsets_packed=mesh_rotation)
+        
+        # Apply random translation (forcing the center of the vehicle to stay in the image)
+        mesh_dx = random.uniform(-1, 1) / scaling_factor
+        mesh_dz = random.uniform(-1, 1) / scaling_factor
+        mesh_dx -= torch.mean(mesh.verts_padded(), dim=1)[0][0].item()
+        mesh_dz -= torch.mean(mesh.verts_padded(), dim=1)[0][2].item()
+        mesh_translation = torch.tensor([mesh_dx, 0, mesh_dz], device=self.device) * torch.ones(size=mesh.verts_padded().shape[1:], device=self.device)
+        mesh.offset_verts_(vert_offsets_packed=mesh_translation)
+        
+        return mesh.clone()
+    
+    def generate_non_centered_synthetic_subset(self, dataset, dataset_type, meshes, positive_limit=None, negative_limit=None):
+        print(f"Generating {dataset_type} synthetic dataset.")
+        positive_counter = 0
+        negative_counter = 0
+        negative_save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, dataset_type, "negative")
+        positive_save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, dataset_type, "positive")
+        
+        # Get the total number of negative samples in the dataset
+        total_positive, total_negative = dataset.get_posneg_count()
+        
+        # Remove all positive samples, as they are not used for synthetic dataset generation
+        dataset.remove_positives()
+        
+        # Split the remaining samples into future positive and negative samples
+        dataset.shuffle()
+        if positive_limit is None and negative_limit is None:
+            # Split equally
+            pos_max_index = len(dataset) // 2
+            neg_max_index = len(dataset)
+        elif positive_limit is not None and negative_limit is None:
+            assert positive_limit <= len(dataset), "Positive limit is greater than the total number of elements in the dataset."
+            pos_max_index = positive_limit
+            neg_max_index = len(dataset)
+        elif positive_limit is None and negative_limit is not None:
+            assert negative_limit <= len(dataset), "Negative limit is greater than the total number of elements in the dataset."
+            pos_max_index = len(dataset) - negative_limit
+            neg_max_index = len(dataset)
+        elif positive_limit is not None and negative_limit is not None:
+            assert positive_limit + negative_limit <= len(dataset), "Negative and positive limits sum is greater than the total number of elements in the dataset."
+            pos_max_index = positive_limit
+            neg_max_index = positive_limit + negative_limit
+        else:
+            raise NotImplementedError
+        positive_files = dataset.get_posneg()[1][:pos_max_index].copy()
+        negative_files = dataset.get_posneg()[1][pos_max_index:neg_max_index].copy()
+
+        # Generate negative samples
+        print(f"Generating {len(negative_files)} negative samples.")
+        for negative_file in tqdm(negative_files):
+            image_path = negative_file['image_path']
+            save_path = os.path.join(negative_save_dir, f"image_{negative_counter}.png")
+            shutil.copy(image_path, save_path)
+            negative_counter += 1
+        
+        # Generate positive samples
+        dataset.build_metadata_from_posneg(positive_files, [])
+        print(f"Generating {len(positive_files)} positive samples.")
+        for image, label in tqdm(dataset):            
+            mesh = random.choice(meshes)
+            
+            # Positive class (i.e. with vehicle)
+            # The numbers below were selected to make sure that the elevation is above 70 degrees
+            distance = 5.0
+            # elevation, azimuth = sample_random_elev_azimuth(-1.287, -1.287, 1.287, 1.287, 5.0) 
+            elevation, azimuth = (90, 0)
+            lights_direction = torch.tensor([random.uniform(-1, 1),-1.0,random.uniform(-1, 1)], device=self.device, requires_grad=True).unsqueeze(0)
+            # scaling_factor = random.uniform(0.70, 0.80)
+            scaling_factor = 0.85
+            intensity = random.uniform(0.0, 1.0)
+            
+            # Randomly move and rotate the meshes 
+            mesh = self.randomly_move_and_rotate_meshes(mesh, scaling_factor, positive_counter)
+            
+            # Render and save the image
+            synthetic_image = self.renderer.render(
+                mesh, 
+                image, 
+                elevation, 
+                azimuth,
+                lights_direction,
+                scaling_factor=scaling_factor,
+                intensity=intensity,
+                ambient_color=((0.05, 0.05, 0.05),),
+                distance=distance
+            )
+            save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, dataset_type, "positive", f"image_{positive_counter}.png")
+            save_image(synthetic_image.permute(2, 0, 1), save_dir)
+            positive_counter += 1
+        print(f"Generated {positive_counter} positive images and {negative_counter} negative images.")
+    
+    def generate_non_centered_synthetic_dataset(self, train_set, test_set):
+        # Sample the meshes into training and testing meshes
+        n_training_meshes = int(len(self.meshes) * self.cfg.TRAIN_MESHES_FRACTION)
+        n_testing_meshes = len(self.meshes) - n_training_meshes
+        train_meshes, test_meshes = random_unique_split(self.meshes, n_training_meshes, n_testing_meshes)
+        
+        # Check that the path exists. If not - create it
+        Path(os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "train", "positive")).mkdir(parents=True, exist_ok=True)
+        Path(os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "train", "negative")).mkdir(parents=True, exist_ok=True)
+        Path(os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "test", "positive")).mkdir(parents=True, exist_ok=True)
+        Path(os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, "test", "negative")).mkdir(parents=True, exist_ok=True)
+        
+        self.generate_non_centered_synthetic_subset(train_set, "train", train_meshes, positive_limit=self.cfg.POSITIVE_LIMIT_TRAIN, negative_limit=self.cfg.NEGATIVE_LIMIT_TRAIN)
+        self.generate_non_centered_synthetic_subset(test_set, "test", test_meshes, positive_limit=self.cfg.POSITIVE_LIMIT_TEST, negative_limit=self.cfg.NEGATIVE_LIMIT_TEST)
     
     def attack_image_mesh(self, mesh, background_image):
         lights_direction = torch.nn.Parameter(torch.tensor([0.0,-1.0,0.0], device=self.device, requires_grad=True).unsqueeze(0))

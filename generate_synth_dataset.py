@@ -51,4 +51,5 @@ background_image = samples[0][0].clone()
 # adv_net.failure_analysis(test_set, resolution=25, n_samples=100, intensity=1.0)
 
 """Generate synthetic dataset"""
-adv_net.generate_synthetic_dataset(train_set, test_set)
+# adv_net.generate_synthetic_dataset(train_set, test_set)
+adv_net.generate_non_centered_synthetic_dataset(train_set, test_set)
