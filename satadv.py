@@ -3,8 +3,11 @@ import torch
 from torch import nn
 import torchvision.models as models
 import glob
+from functools import reduce
 from pytorch3d.io import load_objs_as_meshes
 from pytorch3d.transforms import euler_angles_to_matrix
+from pytorch3d.structures import Meshes, join_meshes_as_scene
+from pytorch3d.renderer import RasterizationSettings, MeshRasterizer, MeshRenderer, SoftSilhouetteShader, FoVOrthographicCameras, look_at_view_transform, DirectionalLights
 from torch.nn import BCELoss
 from matplotlib import pyplot as plt
 import random
@@ -301,7 +304,19 @@ class SatAdv(nn.Module):
         self.generate_synthetic_subset(train_set, "train", train_meshes, positive_limit=self.cfg.POSITIVE_LIMIT_TRAIN, negative_limit=self.cfg.NEGATIVE_LIMIT_TRAIN)
         self.generate_synthetic_subset(test_set, "test", test_meshes, positive_limit=self.cfg.POSITIVE_LIMIT_TEST, negative_limit=self.cfg.NEGATIVE_LIMIT_TEST)
     
-    def randomly_move_and_rotate_meshes(self, mesh, scaling_factor, positive_counter):
+    def sample_number_of_non_centered_vehicles(self):
+        num_vehicles = -1
+        probabilities = self.cfg.NUMBER_OF_VEHICLES_PROBABILITY_DISTRIBUTION
+        probability = random.uniform(0, 1)
+        for i in range(len(probabilities) - 1):
+            if probability >= probabilities[i] and probability <= probabilities[i + 1]:
+                num_vehicles = i + 1
+        if num_vehicles == -1:
+            raise ValueError("Range of probabilities is incorrect!")
+        else:
+            return num_vehicles
+
+    def randomly_move_and_rotate_mesh(self, mesh, scaling_factor):
         # Apply random rotation
         mesh_rotation = euler_angles_to_matrix(torch.tensor([0, random.uniform(0, 2 * math.pi), 0]), convention="XYZ").to(self.device)
         mesh_rotation = torch.matmul(mesh_rotation, mesh.verts_packed().data.T).T - mesh.verts_packed()
@@ -317,6 +332,49 @@ class SatAdv(nn.Module):
         
         return mesh.clone()
     
+    def randomly_place_meshes(self, meshes, distance, elevation, azimuth, lights_direction, scaling_factor, intensity):
+        if len(meshes) == 1:
+            return self.randomly_move_and_rotate_mesh(meshes[0], scaling_factor)
+        else:
+            intersecting = True
+            # Create the renderer
+            ambient_color = ((0.05, 0.05, 0.05),)
+            diffuse_color = intensity * torch.tensor([1.0, 1.0, 1.0], device=self.device).unsqueeze(0)
+            R, T = look_at_view_transform(dist=distance, elev=elevation, azim=azimuth)
+            lights = DirectionalLights(device=self.device, direction=lights_direction, ambient_color=ambient_color, diffuse_color=diffuse_color)
+            cameras = FoVOrthographicCameras(
+                        device=self.device, 
+                        R=R, 
+                        T=T, 
+                        scale_xyz=((scaling_factor, scaling_factor, scaling_factor),)
+                    ) 
+            sigma = 1e-4
+            raster_settings_silhouette = RasterizationSettings(
+                image_size=50, 
+                blur_radius=np.log(1. / 1e-4 - 1.)*sigma, 
+                faces_per_pixel=50, 
+            )
+            silhouette_renderer = MeshRenderer(
+                rasterizer=MeshRasterizer(
+                    cameras=cameras, 
+                    raster_settings=raster_settings_silhouette
+                ),
+                shader=SoftSilhouetteShader()
+            )
+            while intersecting:
+                silhouettes = []
+                for i in range(len(meshes)):
+                    meshes[i] = self.randomly_move_and_rotate_mesh(meshes[i], scaling_factor)
+                    silhouette = silhouette_renderer(meshes[i], cameras=cameras, lights=lights)
+                    silhouette = (silhouette[..., 3] > 0.5).float()
+                    silhouettes.append(silhouette)
+                if torch.any(reduce(lambda x, y: x + y, silhouettes) > 1.0):
+                    intersecting = True
+                else:
+                    intersecting = False
+            mesh = join_meshes_as_scene(meshes)
+            return mesh
+
     def generate_non_centered_synthetic_subset(self, dataset, dataset_type, meshes, positive_limit=None, negative_limit=None):
         print(f"Generating {dataset_type} synthetic dataset.")
         positive_counter = 0
@@ -364,21 +422,21 @@ class SatAdv(nn.Module):
         # Generate positive samples
         dataset.build_metadata_from_posneg(positive_files, [])
         print(f"Generating {len(positive_files)} positive samples.")
-        for image, label in tqdm(dataset):            
-            mesh = random.choice(meshes)
+        for image, label in tqdm(dataset):
+            num_vehicles = self.sample_number_of_non_centered_vehicles()
+            sampled_meshes = random.sample(meshes, num_vehicles)
             
             # Positive class (i.e. with vehicle)
             # The numbers below were selected to make sure that the elevation is above 70 degrees
             distance = 5.0
-            # elevation, azimuth = sample_random_elev_azimuth(-1.287, -1.287, 1.287, 1.287, 5.0) 
             elevation, azimuth = (90, 0)
             lights_direction = torch.tensor([random.uniform(-1, 1),-1.0,random.uniform(-1, 1)], device=self.device, requires_grad=True).unsqueeze(0)
-            # scaling_factor = random.uniform(0.70, 0.80)
-            scaling_factor = 0.85
+            scaling_factor = random.uniform(0.70, 0.80)
             intensity = random.uniform(0.0, 1.0)
             
             # Randomly move and rotate the meshes 
-            mesh = self.randomly_move_and_rotate_meshes(mesh, scaling_factor, positive_counter)
+            # mesh = self.randomly_move_and_rotate_meshes(mesh, scaling_factor, positive_counter)
+            mesh = self.randomly_place_meshes(sampled_meshes, distance, elevation, azimuth, lights_direction, scaling_factor, intensity)
             
             # Render and save the image
             synthetic_image = self.renderer.render(
