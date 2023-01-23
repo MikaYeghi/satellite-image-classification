@@ -1,5 +1,7 @@
 import glob
 import torch
+import pickle
+from tqdm import tqdm
 from PIL import Image
 from torchvision.transforms.functional import pil_to_tensor
 
@@ -30,6 +32,34 @@ def analyze_camouflage_unique_colors(camouflages_dir, device='cuda'):
             for j in range(cols):
                 colors.add(image[i][j])    
 
-# Analyze the unique colors in camouflages
-camouflages_dir = "/home/myeghiaz/Storage/organic-camouflages"
-analyze_camouflage_unique_colors(camouflages_dir, device=device)
+def get_num_vehicles_distribution(annotations_dir):
+    total_num_vehicles = 0
+    num_vehicles_distribution = {}
+    annotation_files = glob.glob(annotations_dir + "/*.pkl")
+    for annotation_file in tqdm(annotation_files):
+        with open(annotation_file, 'rb') as f:
+            data = pickle.load(f)
+        num_vehicles = len(data['object_locations']['small'][0])
+        if num_vehicles == 0:
+            pass
+        else:
+            if num_vehicles in num_vehicles_distribution.keys():
+                num_vehicles_distribution[num_vehicles] += 1
+            else:
+                num_vehicles_distribution[num_vehicles] = 1
+            total_num_vehicles += 1
+    text = ""
+    for num_vehicles in num_vehicles_distribution:
+        # num_vehicles_distribution[num_vehicles] /= total_num_vehicles
+        text += f"{num_vehicles} vehicles: {num_vehicles_distribution[num_vehicles]}\n"
+    text += f"Total: {total_num_vehicles}"
+    print(text)
+    pdb.set_trace()
+                
+"""Analyze the unique colors in camouflages"""
+# camouflages_dir = "/home/myeghiaz/Storage/organic-camouflages"
+# analyze_camouflage_unique_colors(camouflages_dir, device=device)
+
+"""Extract the distribution of the number of vehicles in the non-centered dataset"""
+annotations_dir = "/home/myeghiaz/Storage/GSD-0.125m_sample-size-50_mean-sampling-freq-1/annotations"
+get_num_vehicles_distribution(annotations_dir)

@@ -2,7 +2,7 @@ import os
 shape_code = "x1.3z1.3"
 
 """Dataset parameters"""
-DATASET_NAMES = ['synthetic-non-centered-no-margin']
+DATASET_NAMES = ['real']
 TRAIN_PATH = []
 TEST_PATH = []
 if "real" in DATASET_NAMES:
@@ -84,42 +84,44 @@ else:
     NUM_DATALOADER_WORKERS = 8
 BATCH_SIZE = 1024
 MODEL_WEIGHTS = None
-# MODEL_WEIGHTS = "saved_models/non-centered-no-margin-baseline/model_final.pt"
+# MODEL_WEIGHTS = "saved_models/synthetic-adversarial-vgg/2/model_final.pt"
 NUM_CLASSES = 1 # number of foreground classes
-LR = 0.000001
-N_EPOCHS = 2
+LR = 0.000005
+N_EPOCHS = 5
 TEST_SIZE = 0.2
 VAL_FREQ = 1
 # OUTPUT_DIR = f"/home/myeghiaz/Storage/modified-shape-datasets/results/{shape_code}"
-OUTPUT_DIR = "saved_models/synthetic-non-centered-no-margin-weighted/"
+OUTPUT_DIR = "output/"
 RESULTS_DIR = "results/"
 LOG_DIR = os.path.join(OUTPUT_DIR, "logs")
-EVAL_ONLY = False
+EVAL_ONLY = True
 FP_FN_analysis = True
 APPLY_TRAIN_TRANSFORMS = False
 MODEL_NAME = 'vgg16'
-FOCAL_LOSS = {"alpha": 0.8, "gamma": 2}
+FOCAL_LOSS = {"alpha": 0.33, "gamma": 2}
 SHUFFLE = True
 
 """Generating a train-test dataset from raw dataset"""
 RAW_DATASET_DIR = "/home/myeghiaz/Storage/GSD-0.125m_sample-size-50_mean-sampling-freq-1"
-RAW_DATASET_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Real-non-centered-0.125m-50px-no-margin"
+RAW_DATASET_SAVE_DIR = "/home/myeghiaz/Storage/proba"
 TRAIN_TEST_SPLIT_RATIO = 0.0
 
 """Dataset generation parameters"""
-SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-non-centered-0.125m-50px"
-MESHES_DIR = "/var/storage/myeghiaz/GAN-vehicles-1000"
+SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/proba"
+MESHES_DIR = "/var/storage/myeghiaz/GAN-vehicles"
 TRAIN_MESHES_FRACTION = 0.8
-POSITIVE_LIMIT_TRAIN = None
-NEGATIVE_LIMIT_TRAIN = None
-POSITIVE_LIMIT_TEST = None
-NEGATIVE_LIMIT_TEST = None
+POSITIVE_LIMIT_TRAIN = 1
+NEGATIVE_LIMIT_TRAIN = 0
+POSITIVE_LIMIT_TEST = 0
+NEGATIVE_LIMIT_TEST = 0
 CAMOUFLAGE_TEXTURES_PATH = None
 DESCRIPTIVE_COLORS_PATH = "/home/myeghiaz/Storage/descriptive-colors-real-train-fraction-0.1/cluster_centers_5.pth"
 DRESS_CAMOUFLAGE = None # fixed - uses CAMOUFLAGE_TEXTURES_PATH, random - builds random camouflages from DESCRIPTIVE_COLORS_PATH, 'organic' - load organic camouflages and replace their colors with colors from the dataset, None - no camouflage augmentation is applied
 PIXELATION_BLOCK_SIZE = 16
 NUM_DESCRIPTIVE_COLORS = 10
 COLORS_PER_CAMOUFLAGE = 4
+# NUMBER_OF_VEHICLES_PROBABILITY_DISTRIBUTION = [0.0, 8395/9800, 9580/9800, 9772/9800, 9797/9800, 1.0]
+NUMBER_OF_VEHICLES_PROBABILITY_DISTRIBUTION = [0.0, 8395/9800, 9580/9800, 9772/9800, 1.0]
 
 """Attack parameters"""
 BRIGHTNESS_LEVELS = [0.0, 0.2, 0.4, 0.6, 0.8, 1.0]
