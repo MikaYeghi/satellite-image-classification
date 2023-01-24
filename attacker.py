@@ -8,24 +8,28 @@ from pathlib import Path
 
 from renderer import Renderer
 from losses import BCELoss, ColorForce, BCEColor
-from utils import blend_images
+from utils import blend_images, load_descriptive_colors
 
 import pdb
 
 class FGSMAttacker:
-    def __init__(self, model, attacked_params, save_dir, epsilon=1e-3, device='cuda'):
+    def __init__(self, model, cfg, device='cuda'):
         self.model = model
-        self.attacked_params = attacked_params
-        self.epsilon = epsilon
+        self.cfg = cfg
+        self.attacked_params = cfg.ATTACKED_PARAMS
+        self.epsilon = cfg.ATTACK_LR
         self.device = device
         self.renderer = Renderer(device=device)
         
+        # Load dataset descriptive colors
+        self.descriptive_colors = load_descriptive_colors(cfg.DESCRIPTIVE_COLORS_PATH)
+        
         # Create the save directories
-        self.save_dir = save_dir
-        Path(os.path.join(save_dir, "original")).mkdir(parents=True, exist_ok=True)
-        Path(os.path.join(save_dir, "positive")).mkdir(parents=True, exist_ok=True)
-        Path(os.path.join(save_dir, "negative")).mkdir(parents=True, exist_ok=True)
-        Path(os.path.join(save_dir, "difference")).mkdir(parents=True, exist_ok=True)
+        self.save_dir = cfg.ADVERSARIAL_SAVE_DIR
+        Path(os.path.join(self.save_dir, "original")).mkdir(parents=True, exist_ok=True)
+        Path(os.path.join(self.save_dir, "positive")).mkdir(parents=True, exist_ok=True)
+        Path(os.path.join(self.save_dir, "negative")).mkdir(parents=True, exist_ok=True)
+        Path(os.path.join(self.save_dir, "difference")).mkdir(parents=True, exist_ok=True)
         
         # torch.Tensor to PIL.Image converter
         self.converter = torchvision.transforms.ToPILImage()
@@ -102,6 +106,31 @@ class FGSMAttacker:
                 
                 # Perturb the data
                 rendering_params['mesh'].textures.maps_padded().data = rendering_params['mesh'].textures.maps_padded().data + self.epsilon * sign_grad
+            elif param == 'pixelated-textures':
+                grad_tensor = rendering_params['mesh'].textures.maps_padded().grad.data.clone()
+                noise = torch.randn(size=grad_tensor.shape, device=self.device)
+                noise /= torch.norm(noise, p=2)
+                grad_tensor += 0.1 * noise
+                colors_tensor = rendering_params['mesh'].textures.maps_padded().data.clone()
+                updated_colors_tensor = torch.empty(size=colors_tensor.shape[1:], device=self.device)
+                downsampled_size = 512 // self.cfg.ATTACKED_PIXELATED_TEXTURE_BLOCK_SIZE
+                errors_tensors = torch.empty(size=(0, downsampled_size, downsampled_size), device=self.device)
+                for descriptive_color in self.descriptive_colors:
+                    # Colors are in a 3D space. Find the descriptive color 
+                    # which is closest to the gradient direction. This is done using simple vector
+                    # manipulations.
+                    lambda_color = torch.sum((descriptive_color - colors_tensor) * grad_tensor, dim=-1)
+                    lambda_color = lambda_color / (torch.sum(grad_tensor * grad_tensor, dim=-1) + 1e-6)
+                    errors_color = descriptive_color - colors_tensor - torch.mul(lambda_color.unsqueeze(-1), grad_tensor)
+                    errors_color = torch.norm(errors_color, p=2, dim=-1)
+                    errors_tensors = torch.cat((errors_tensors, errors_color), dim=0)
+                errors_tensors += 1e6 * (errors_tensors == 0).float() # Current color point has error 0, causing no change
+                color_indices_tensor = torch.argmin(errors_tensors, dim=0)
+                for i in range(color_indices_tensor.shape[0]):
+                    for j in range(color_indices_tensor.shape[1]):
+                        updated_colors_tensor[i][j] = self.descriptive_colors[color_indices_tensor[i][j]]
+                rendering_params['mesh'].textures.maps_padded().data = updated_colors_tensor.unsqueeze(0)
+                # print(f"Average change: {torch.norm(updated_colors_tensor - colors_tensor, p=2).item()}")
             elif param == 'mesh':
                 # TODO: make everything related to the mesh (textures, vertices) differentiable
                 raise NotImplementedError
@@ -118,6 +147,11 @@ class FGSMAttacker:
         for attacked_param in attacked_params:
             if attacked_param == 'textures':
                 for i in range(len(rendering_params['mesh'].textures.maps_list())):
+                    rendering_params['mesh'].textures.maps_padded().requires_grad = True
+            elif attacked_param == 'pixelated-textures':
+                for i in range(len(rendering_params['mesh'].textures.maps_list())):
+                    downsampled_size = 512 // self.cfg.ATTACKED_PIXELATED_TEXTURE_BLOCK_SIZE
+                    rendering_params['mesh'].textures.maps_padded().data = torch.rand(size=(1, downsampled_size, downsampled_size, 3), device=self.device)
                     rendering_params['mesh'].textures.maps_padded().requires_grad = True
             elif attacked_param == 'mesh':
                 # TODO: make everything related to the mesh (textures, vertices) differentiable
@@ -136,7 +170,7 @@ class FGSMAttacker:
         self.model.zero_grad()
         
         for param in self.attacked_params:
-            if param == 'textures':
+            if param == 'textures' or param == 'pixelated-textures':
                 rendering_params['mesh'].textures.maps_padded().grad.zero_()
             elif param == 'mesh':
                 raise NotImplementedError
@@ -154,7 +188,7 @@ class FGSMAttacker:
         # Set the model to eval mode following the PyTorch tutorial for adversarial attacks
         self.model.eval()
         self.model.zero_grad()
-        # pdb.set_trace()
+        
         # Sample transformations
         rendering_params_list = [
             attacked_image.generate_rendering_params(attacked_image.get_background_image(), attacked_image.get_mesh()) for _ in range(N_transforms)
@@ -198,7 +232,7 @@ class FGSMAttacker:
                 # Run prediction on the image
                 pred = self.activation(self.model(image))
                 preds.append(pred.item())
-                # print(f"Mean pred: {sum(preds) / len(preds)}. Min pred: {min(preds)}")
+                print(f"Mean pred: {sum(preds) / len(preds)}. Min pred: {min(preds)}")
                 
                 # Compute the unit loss
                 label_batched = torch.tensor([true_label], device=self.device, dtype=torch.float).unsqueeze(0)
@@ -206,7 +240,7 @@ class FGSMAttacker:
                 
             # Attack stops if the minimum prediction confidence goes beyond the threshold
             # The if-statement below saves the last randomly sampled image with attacked parameters
-            print(min(preds))
+            # print(min(preds))
             if min(preds) > 0.5:
                 attacked_image.set_adversarial_image(image[0])
                 attacked_image.set_adversarial_rendering_params(rendering_params)

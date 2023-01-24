@@ -34,7 +34,7 @@ meshes = load_meshes(cfg, shuffle_=True, device='cpu')
 _, _, model = load_checkpoint(cfg, device)
 
 """Initialize the attacker"""
-attacker = FGSMAttacker(model, cfg.ATTACKED_PARAMS, cfg.ADVERSARIAL_SAVE_DIR, epsilon=cfg.ATTACK_LR)
+attacker = FGSMAttacker(model, cfg)
 print(attacker)
 
 """Loop through all possible negative samples"""

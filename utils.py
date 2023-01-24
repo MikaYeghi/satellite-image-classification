@@ -147,6 +147,11 @@ def load_meshes(cfg, shuffle_=True, device='cuda'):
         shuffle(meshes)
     return meshes    
 
+def load_descriptive_colors(colors_path, device='cuda'):
+    descriptive_colors = torch.load(colors_path)
+    descriptive_colors = descriptive_colors.to(device)
+    return descriptive_colors
+
 def get_lightdir_from_elaz(elev, azim, device='cuda'):
     x = -math.cos(math.radians(elev)) * math.sin(math.radians(azim))
     y = -math.sin(math.radians(elev))
