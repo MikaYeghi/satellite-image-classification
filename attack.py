@@ -4,7 +4,7 @@ from tqdm import tqdm
 from pytorch3d.renderer import TexturesUV
 
 from dataset import SatelliteDataset
-from attacker import FGSMAttacker
+from attacker import FGSMAttacker, UnifiedTexturesAttacker
 from transforms import SatTransforms
 from utils import load_meshes, create_model, load_checkpoint
 from attacked_image import AttackedImage
@@ -18,7 +18,7 @@ import pdb
 transforms = SatTransforms()
 train_transform = transforms.get_train_transforms()
 train_set = SatelliteDataset(cfg.TRAIN_PATH, transform=train_transform, device=device)
-train_set.remove_positives()
+# train_set.remove_positives()
 
 """K-means analysis"""
 # train_set.remove_positives()
@@ -27,15 +27,20 @@ train_set.remove_positives()
 # exit()
 
 """Load the meshes"""
-meshes = load_meshes(cfg, shuffle_=True, device='cpu')
+# meshes = load_meshes(cfg, shuffle_=True, device='cpu')
 
 """Initialize the model"""
 # model = create_model(cfg, device)
 _, _, model = load_checkpoint(cfg, device)
 
 """Initialize the attacker"""
-attacker = FGSMAttacker(model, cfg)
+attacker = UnifiedTexturesAttacker(model, train_set, cfg, device=device)
 print(attacker)
+
+"""Perform the attack"""
+adversarial_texture_map = attacker.attack()
+
+exit()
 
 """Loop through all possible negative samples"""
 idx = 0

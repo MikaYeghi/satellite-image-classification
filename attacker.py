@@ -1,28 +1,26 @@
 import os
 import torch
+import random
 import torchvision
 from tqdm import tqdm
 from torch import nn
-from torchvision.utils import save_image
 from pathlib import Path
+from torchvision.utils import save_image
+from torch.utils.tensorboard import SummaryWriter
 
 from renderer import Renderer
-from losses import BCELoss, ColorForce, BCEColor
-from utils import blend_images, load_descriptive_colors
+from losses import BCELoss, ColorForce, BCEColor, ClassificationScore, TVCalculator
+from utils import blend_images, load_descriptive_colors, load_meshes, sample_random_elev_azimuth
 
 import pdb
 
-class FGSMAttacker:
+class BaseAttacker:
     def __init__(self, model, cfg, device='cuda'):
         self.model = model
         self.cfg = cfg
         self.attacked_params = cfg.ATTACKED_PARAMS
-        self.epsilon = cfg.ATTACK_LR
         self.device = device
         self.renderer = Renderer(device=device)
-        
-        # Load dataset descriptive colors
-        self.descriptive_colors = load_descriptive_colors(cfg.DESCRIPTIVE_COLORS_PATH)
         
         # Create the save directories
         self.save_dir = cfg.ADVERSARIAL_SAVE_DIR
@@ -31,14 +29,26 @@ class FGSMAttacker:
         Path(os.path.join(self.save_dir, "negative")).mkdir(parents=True, exist_ok=True)
         Path(os.path.join(self.save_dir, "difference")).mkdir(parents=True, exist_ok=True)
         
+        # Set up the model
+        self.activation = nn.Sigmoid() # Need this to apply to the model output
+
+class FGSMAttacker(BaseAttacker):
+    def __init__(self, model, cfg, device='cuda'):
+        super().__init__(model, cfg, device)
+        
+        # Set up attack parameters
+        self.epsilon = cfg.ATTACK_LR
+        
+        # Load dataset descriptive colors
+        self.descriptive_colors = load_descriptive_colors(cfg.DESCRIPTIVE_COLORS_PATH)
+        
         # torch.Tensor to PIL.Image converter
         self.converter = torchvision.transforms.ToPILImage()
         
         # List which stores AttackedImage variables
         self.adversarial_examples_list = []
         
-        # Set up the model
-        self.activation = nn.Sigmoid() # Need this to apply to the model output
+        # Set up the attack loss function
         self.loss_fn = BCELoss()
     
     def attack_single_image(self, attacked_image, true_label=0):
@@ -290,3 +300,164 @@ class FGSMAttacker:
             
     def get_num_pairs(self):
         return len(self.adversarial_examples_list)
+    
+class UnifiedTexturesAttacker(BaseAttacker):
+    def __init__(self, model, attack_set, cfg, device='cuda'):
+        super().__init__(model, cfg, device)
+        
+        # Load the meshes
+        self.cfg = cfg
+        self.attack_set = self.prepare_attack_set(attack_set)
+        self.meshes = load_meshes(cfg, device='cpu')
+        self.device = device
+        
+        # Set up the attack loss function
+        self.loss_fns = self.get_loss_fns(cfg)
+    
+    def __str__(self):
+        text = "-" * 80 + "\n"
+        text += "UnifiedTexturesAttacker.\n"
+        text += f"Model: {self.model.__class__.__name__}.\n"
+        text += f"Number of meshes: {len(self.meshes)} vehicles.\n"
+        text += f"Dataset size: {len(self.attack_set)} empty images.\n"
+        text += "-" * 80
+        return text
+    
+    def prepare_attack_set(self, attack_set):
+        """
+        Preprocess the dataset which is used for attacking the model.
+        Need to remove positive samples, since images are generated on the fly during the attack.
+        
+        inputs:
+            - attack_set: an object of class SatelliteDataset
+        outputs:
+            - attack_set: an object of class SatelliteDataset without positive samples
+        """
+        attack_set.remove_positives()
+        return attack_set
+    
+    def get_loss_fns(self, cfg):
+        """
+        Extract loss function terms from the loss function keyword.
+        
+        inputs:
+            - cfg: configurations loaded from the config file
+        outputs:
+            - loss_fns_list: list of loss function terms
+        """
+        loss_fn_keyword = cfg.ATTACK_LOSS_FUNCTION
+        loss_fn_parameters = cfg.ATTACK_LOSS_FUNCTION_PARAMETERS
+        loss_fns_dict = {}
+        if "classcore" in loss_fn_keyword:
+            loss_fn = ClassificationScore(class_id=loss_fn_parameters['classcore'])
+            loss_fns_dict['classcore'] = loss_fn
+        if "TV" in loss_fn_keyword:
+            loss_fn = TVCalculator(coefficient=loss_fn_parameters['TV-coefficient'])
+            loss_fns_dict['TV'] = loss_fn
+        return loss_fns_dict
+    
+    def attack(self):
+        """
+        Perform adversarial attack to obtain a unified adversarial texture map.
+        """
+        # Initialize the attacked texture map as a random map
+        adv_textures = torch.rand(size=self.meshes[0].textures.maps_padded().shape, device=self.device)
+        adv_textures.requires_grad_(True)
+        
+        # Set up the attack optimization
+        optimizer = torch.optim.Adam([adv_textures], lr=self.cfg.ATTACK_BASE_LR, amsgrad=True)
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=self.cfg.ATTACK_LR_GAMMA)
+        
+        # Logging
+        writer = SummaryWriter(log_dir=self.cfg.LOG_DIR)
+        iter_counter = 0
+        
+        # Perform the attack
+        for epoch in range(self.cfg.ATTACK_N_EPOCHS):
+            progress_bar = tqdm(self.attack_set, desc=f"Epoch #{epoch + 1}")
+            for empty_image, _ in progress_bar:
+                # Generate an image with a vehicle in it
+                image = self.render_image(empty_image, adv_textures, centered=self.cfg.CENTERED_IMAGES_ATTACK)
+                
+                # Generate predictions
+                self.model.train()
+                preds = self.model(image)
+                preds = self.activation(preds)
+                loss_dict = self.loss_dict_forward(preds, adv_textures)
+                total_loss = sum(loss_dict.values())
+                total_loss.backward()
+                optimizer.step()
+                optimizer.zero_grad()
+                
+                # Log
+                for loss_fn in loss_dict:
+                    writer.add_scalar(loss_fn, loss_dict[loss_fn].item(), iter_counter)
+                writer.add_scalar("Total loss", total_loss.item(), iter_counter)
+                
+                # Update the progress bar
+                progress_bar.set_description(f"Epoch: #{epoch + 1}. Loss: {total_loss.item()}")
+                
+                # Update the iterations counter
+                iter_counter += 1
+            
+            # Update learning rate
+            scheduler.step()
+            
+            # Save the texture map
+            save_image(adv_textures[0].permute(2, 0, 1), f"results/adv_textures_{epoch}.png")
+        
+        # Close the tensorboard logger
+        writer.flush()
+        writer.close()
+        
+    def render_image(self, empty_image, adv_textures, centered=True):
+        """
+        Render a batch of images, where all vehicles have the same texture map (adv_textures).
+        
+        inputs:
+            - empty_images_batch: a batch of background images
+            - adv_textures: the unified texture map which is placed on every mesh
+        outputs:
+            - rendered_images: a batch of images with vehicles
+        """
+        rendered_images = []
+        # Randomly select a mesh from the list of meshes
+        mesh = random.choice(self.meshes).to(self.device)
+        
+        # Replace the texture map
+        mesh.textures._maps_padded = adv_textures
+        
+        # Offset the vehicle if non-centered
+        if centered:
+            pass
+        else:
+            raise NotImplementedError
+        
+        # Sample rendering parameters
+        distance = 5.0
+        elevation, azimuth = sample_random_elev_azimuth(-1.287, -1.287, 1.287, 1.287, 5.0) 
+        lights_direction = torch.tensor([random.uniform(-1, 1), -1.0 ,random.uniform(-1, 1)], device=self.device, requires_grad=True).unsqueeze(0)
+        scaling_factor = random.uniform(0.70, 0.80)
+        intensity = random.uniform(0.2, 2.0)
+        ambient_color = ((0.05, 0.05, 0.05),)
+        
+        # Render the image
+        image = self.renderer.render(
+                mesh=mesh,
+                background_image=empty_image,
+                elevation=elevation,
+                azimuth=azimuth,
+                lights_direction=lights_direction,
+                distance=distance,
+                scaling_factor=scaling_factor,
+                intensity=intensity,
+                ambient_color=ambient_color
+        ).permute(2, 0, 1).unsqueeze(0)
+        
+        return image
+    
+    def loss_dict_forward(self, predictions, adversarial_textures):
+        loss_dict = {}
+        for loss_fn in self.loss_fns:
+            loss_dict[loss_fn] = self.loss_fns[loss_fn](predictions, adversarial_textures)
+        return loss_dict

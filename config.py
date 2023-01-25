@@ -132,3 +132,12 @@ ATTACKED_PARAMS = ['pixelated-textures']
 ADVERSARIAL_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Adversarial-proba"
 ATTACKED_PIXELATED_TEXTURE_BLOCK_SIZE = 32
 NUM_ADV_IMGS = 10 # Number of adversarial images that will be generated during the attack
+ATTACK_LOSS_FUNCTION = "classcore+TV"
+ATTACK_LOSS_FUNCTION_PARAMETERS = {
+    "classcore": 0,
+    "TV-coefficient": 1.0
+}
+ATTACK_N_EPOCHS = 5
+ATTACK_BASE_LR = 0.00001
+ATTACK_LR_GAMMA = 0.5
+CENTERED_IMAGES_ATTACK = True
