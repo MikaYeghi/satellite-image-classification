@@ -84,7 +84,7 @@ else:
     NUM_DATALOADER_WORKERS = 8
 BATCH_SIZE = 1024
 # MODEL_WEIGHTS = None
-MODEL_WEIGHTS = "saved_models/synthetic-augmented-vgg/model_final.pth"
+MODEL_WEIGHTS = "saved_models/real-baseline/model_final.pth"
 NUM_CLASSES = 1 # number of foreground classes
 LR = 0.000005
 N_EPOCHS = 5
@@ -97,7 +97,7 @@ LOG_DIR = os.path.join(OUTPUT_DIR, "logs")
 EVAL_ONLY = True
 FP_FN_analysis = True
 APPLY_TRAIN_TRANSFORMS = False
-MODEL_NAME = 'vgg16'
+MODEL_NAME = 'resnet101'
 FOCAL_LOSS = {"alpha": 0.33, "gamma": 2}
 SHUFFLE = True
 
@@ -143,3 +143,4 @@ ATTACK_BATCH_SIZE = 512
 ATTACK_BASE_LR = 0.1
 ATTACK_LR_GAMMA = 0.3
 CENTERED_IMAGES_ATTACK = True
+UNIFIED_TEXTURES_PATH = "/var/storage/myeghiaz/UniText-0.125m-50px-centered/unified_adversarial_textures.png"

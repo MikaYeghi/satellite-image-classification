@@ -41,7 +41,7 @@ attacker = UnifiedTexturesAttacker(model, train_set, test_set, cfg, device=devic
 print(attacker)
 
 """Perform the attack"""
-adversarial_texture_map = attacker.attack()
+# adversarial_texture_map = attacker.attack()
 attacker.evaluate()
 exit()
 

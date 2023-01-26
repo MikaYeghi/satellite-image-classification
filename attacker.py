@@ -3,6 +3,7 @@ import torch
 import random
 import torchvision
 from torch import nn
+from PIL import Image
 from tqdm import tqdm
 from pathlib import Path
 from torch.utils.data import DataLoader
@@ -313,6 +314,7 @@ class UnifiedTexturesAttacker(BaseAttacker):
         self.attack_set = self.prepare_dataset(attack_set)
         self.eval_set = self.prepare_dataset(eval_set)
         self.meshes = load_meshes(cfg, device='cpu')
+        self.adv_textures = self.load_adv_textures(cfg)
         self.device = device
         
         # Set up the attack loss function
@@ -339,6 +341,18 @@ class UnifiedTexturesAttacker(BaseAttacker):
         """
         dataset.remove_positives()
         return dataset
+    
+    def load_adv_textures(self, cfg):
+        if cfg.UNIFIED_TEXTURES_PATH:
+            adv_textures = Image.open(cfg.UNIFIED_TEXTURES_PATH)
+            adv_textures = adv_textures.convert('RGB')
+            adv_textures = torchvision.transforms.functional.pil_to_tensor(adv_textures)
+            adv_textures = adv_textures / 255.
+            adv_textures = adv_textures.permute(1, 2, 0)
+            adv_textures = adv_textures.to(self.device)
+            return adv_textures
+        else:
+            return None
     
     def get_loss_fns(self, cfg):
         """
@@ -430,6 +444,8 @@ class UnifiedTexturesAttacker(BaseAttacker):
         """
         Evaluate the adversariality of the attack.
         """
+        assert self.adv_textures is not None, "No adversarial textures loaded!"
+        
         # Initialize the evaluator
         evaluator = SatEvaluator(device=self.device, pos_label=0, save_dir=self.cfg.ADVERSARIAL_SAVE_DIR)
         
