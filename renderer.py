@@ -1,5 +1,7 @@
 import torch
+import random
 from torch import nn
+from torchvision.utils import save_image
 import torchvision.transforms as tv_transf
 from torchvision.transforms.functional import pil_to_tensor
 
@@ -7,7 +9,7 @@ from torchvision.transforms.functional import pil_to_tensor
 from pytorch3d.io import load_objs_as_meshes, load_obj, save_obj
 
 # Data structures and functions for rendering
-from pytorch3d.structures import Meshes, join_meshes_as_scene
+from pytorch3d.structures import Meshes, join_meshes_as_scene, join_meshes_as_batch
 from pytorch3d.vis.plotly_vis import AxisArgs, plot_batch_individually, plot_scene
 from pytorch3d.vis.texture_vis import texturesuv_image_matplotlib
 from pytorch3d.renderer import (
@@ -74,4 +76,44 @@ class Renderer(nn.Module):
         images = images.permute(0, 3, 1, 2)
         images = self.avg_pool(images)
         images = images[0].permute(1, 2, 0)[..., :3]
+        return images
+    
+    def render_batch(self, meshes, background_images, elevations, azimuths, light_directions, distances,
+                     scaling_factors, intensities, image_size=250, blur_radius=0.0, faces_per_pixel=1, ambient_color=((0.05, 0.05, 0.05),)):
+        transform = tv_transf.Resize((250, 250))
+        background_images = transform(background_images).permute(0, 2, 3, 1)
+        R, T = look_at_view_transform(dist=distances, elev=elevations, azim=azimuths)
+        cameras = FoVOrthographicCameras(
+            device=self.device,
+            R=R,
+            T=T,
+            scale_xyz=scaling_factors
+        )
+        
+        raster_settings = RasterizationSettings(
+            image_size=image_size, 
+            blur_radius=blur_radius, 
+            faces_per_pixel=faces_per_pixel, 
+        )
+        
+        lights = DirectionalLights(device=self.device, direction=light_directions, ambient_color=ambient_color, diffuse_color=intensities)
+        
+        renderer = MeshRenderer(
+            rasterizer=MeshRasterizer(
+                cameras=cameras, 
+                raster_settings=raster_settings,
+            ),
+            shader=SoftPhongShader(
+                device=self.device, 
+                cameras=cameras,
+                lights=lights,
+                blend_params=BlendParams(background_color=background_images)
+            )
+        )
+        
+        images = renderer(meshes, lights=lights, cameras=cameras)
+        images = images.permute(0, 3, 1, 2)
+        images = self.avg_pool(images)
+        images = images[:, :3, ...]
+        
         return images

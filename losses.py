@@ -77,7 +77,7 @@ class ClassificationScore(nn.Module):
         self.coefficient = coefficient
     
     def forward(self, predictions, adv_patch):
-        loss = self.class_id * predictions + (1 - self.class_id) * (1 - predictions)
+        loss = torch.mean(self.class_id * predictions + (1 - self.class_id) * (1 - predictions))
         return self.coefficient * loss
 
 class TVCalculator(nn.Module):

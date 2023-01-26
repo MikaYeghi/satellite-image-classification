@@ -108,7 +108,7 @@ TRAIN_TEST_SPLIT_RATIO = 0.0
 
 """Dataset generation parameters"""
 SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/proba"
-MESHES_DIR = "/var/storage/myeghiaz/GAN-vehicles"
+MESHES_DIR = "/var/storage/myeghiaz/GAN-vehicles-1000"
 TRAIN_MESHES_FRACTION = 0.8
 POSITIVE_LIMIT_TRAIN = 1
 NEGATIVE_LIMIT_TRAIN = 1
@@ -135,9 +135,11 @@ NUM_ADV_IMGS = 10 # Number of adversarial images that will be generated during t
 ATTACK_LOSS_FUNCTION = "classcore+TV"
 ATTACK_LOSS_FUNCTION_PARAMETERS = {
     "classcore": 0,
-    "TV-coefficient": 1.0
+    "TV-coefficient": 1.0,
+    "classcore-coefficient": 0.001
 }
 ATTACK_N_EPOCHS = 5
-ATTACK_BASE_LR = 0.00001
-ATTACK_LR_GAMMA = 0.5
+ATTACK_BATCH_SIZE = 512
+ATTACK_BASE_LR = 0.1
+ATTACK_LR_GAMMA = 0.3
 CENTERED_IMAGES_ATTACK = True

@@ -2,11 +2,13 @@ import os
 import torch
 import random
 import torchvision
-from tqdm import tqdm
 from torch import nn
+from tqdm import tqdm
 from pathlib import Path
+from torch.utils.data import DataLoader
 from torchvision.utils import save_image
 from torch.utils.tensorboard import SummaryWriter
+from pytorch3d.structures import join_meshes_as_batch
 
 from renderer import Renderer
 from losses import BCELoss, ColorForce, BCEColor, ClassificationScore, TVCalculator
@@ -349,7 +351,7 @@ class UnifiedTexturesAttacker(BaseAttacker):
         loss_fn_parameters = cfg.ATTACK_LOSS_FUNCTION_PARAMETERS
         loss_fns_dict = {}
         if "classcore" in loss_fn_keyword:
-            loss_fn = ClassificationScore(class_id=loss_fn_parameters['classcore'])
+            loss_fn = ClassificationScore(class_id=loss_fn_parameters['classcore'], coefficient=loss_fn_parameters['classcore-coefficient'])
             loss_fns_dict['classcore'] = loss_fn
         if "TV" in loss_fn_keyword:
             loss_fn = TVCalculator(coefficient=loss_fn_parameters['TV-coefficient'])
@@ -361,8 +363,13 @@ class UnifiedTexturesAttacker(BaseAttacker):
         Perform adversarial attack to obtain a unified adversarial texture map.
         """
         # Initialize the attacked texture map as a random map
-        adv_textures = torch.rand(size=self.meshes[0].textures.maps_padded().shape, device=self.device)
+        textures_activation = torch.nn.Sigmoid()
+        adv_textures = torch.randn(size=self.meshes[0].textures.maps_padded().shape, device=self.device)
+        adv_textures = textures_activation(adv_textures)
         adv_textures.requires_grad_(True)
+        
+        # Dataloader
+        attack_set_loader = DataLoader(self.attack_set, batch_size=self.cfg.ATTACK_BATCH_SIZE, shuffle=True)
         
         # Set up the attack optimization
         optimizer = torch.optim.Adam([adv_textures], lr=self.cfg.ATTACK_BASE_LR, amsgrad=True)
@@ -374,20 +381,23 @@ class UnifiedTexturesAttacker(BaseAttacker):
         
         # Perform the attack
         for epoch in range(self.cfg.ATTACK_N_EPOCHS):
-            progress_bar = tqdm(self.attack_set, desc=f"Epoch #{epoch + 1}")
-            for empty_image, _ in progress_bar:
+            progress_bar = tqdm(attack_set_loader, desc=f"Epoch #{epoch + 1}")
+            for empty_images_batch, _ in progress_bar:
                 # Generate an image with a vehicle in it
-                image = self.render_image(empty_image, adv_textures, centered=self.cfg.CENTERED_IMAGES_ATTACK)
+                images_batch = self.render_images_batch(empty_images_batch, adv_textures, centered=self.cfg.CENTERED_IMAGES_ATTACK)
                 
                 # Generate predictions
                 self.model.train()
-                preds = self.model(image)
+                preds = self.model(images_batch)
                 preds = self.activation(preds)
                 loss_dict = self.loss_dict_forward(preds, adv_textures)
                 total_loss = sum(loss_dict.values())
                 total_loss.backward()
                 optimizer.step()
                 optimizer.zero_grad()
+                
+                # Clamp to the image range
+                adv_textures.data.clamp_(0, 1)
                 
                 # Log
                 for loss_fn in loss_dict:
@@ -410,17 +420,21 @@ class UnifiedTexturesAttacker(BaseAttacker):
         writer.flush()
         writer.close()
         
+        # Save the unified texture map [TO DO: CHANGE THE SAVE DIR TO ADVERSARIAL_ATTACKS_SAVE_DIR]
+        transform_tensor_to_pil = torchvision.transforms.ToPILImage()
+        adv_textures_PIL = transform_tensor_to_pil(adv_textures[0].permute(2, 0, 1))
+        adv_textures_PIL.save(os.path.join(self.cfg.OUTPUT_DIR, "unified_adversarial_textures.png"))
+        
     def render_image(self, empty_image, adv_textures, centered=True):
         """
-        Render a batch of images, where all vehicles have the same texture map (adv_textures).
+        Render an image, where the vehicle has the unified texture map (adv_textures).
         
         inputs:
-            - empty_images_batch: a batch of background images
+            - empty_image: a background image
             - adv_textures: the unified texture map which is placed on every mesh
         outputs:
-            - rendered_images: a batch of images with vehicles
+            - image: an image with vehicles
         """
-        rendered_images = []
         # Randomly select a mesh from the list of meshes
         mesh = random.choice(self.meshes).to(self.device)
         
@@ -455,6 +469,54 @@ class UnifiedTexturesAttacker(BaseAttacker):
         ).permute(2, 0, 1).unsqueeze(0)
         
         return image
+    
+    def render_images_batch(self, empty_images_batch, adv_textures, centered=True):
+        batch_size = len(empty_images_batch)
+        
+        # Randomly select a mesh from the list of meshes
+        meshes = random.sample(self.meshes, len(empty_images_batch))
+        meshes = join_meshes_as_batch(meshes).to(self.device)
+        
+        # Replace the texture maps
+        meshes.textures._maps_padded = adv_textures.repeat(batch_size, 1, 1, 1)
+        
+        # Offset the vehicle if non-centered
+        if centered:
+            pass
+        else:
+            raise NotImplementedError
+        
+        # Sample rendering parameters
+        distances = [5.0] * batch_size
+        els_azs = [sample_random_elev_azimuth(-1.287, -1.287, 1.287, 1.287, 5.0) for _ in range(batch_size)]
+        elevations = [els_azs_[0] for els_azs_ in els_azs]
+        azimuths = [els_azs_[1] for els_azs_ in els_azs]
+        light_directions = torch.empty(size=(0, 3), device=self.device)
+        for _ in range(batch_size):
+            light_direction = torch.tensor([random.uniform(-1, 1), -1.0 ,random.uniform(-1, 1)], device=self.device).unsqueeze(0)
+            light_directions = torch.cat((light_directions, light_direction))
+        scaling_factors = torch.ones(size=(batch_size, 3), device=self.device)
+        for i in range(batch_size):
+            scaling_factors[i] *= random.uniform(0.70, 0.80)
+        intensities = torch.ones(size=(batch_size, 3), device=self.device)
+        for i in range(batch_size):
+            intensities[i] *= random.uniform(0.70, 0.80)
+        ambient_color = ((0.05, 0.05, 0.05),)
+        
+        # Render the image
+        images = self.renderer.render_batch(
+                meshes=meshes,
+                background_images=empty_images_batch,
+                elevations=elevations,
+                azimuths=azimuths,
+                light_directions=light_directions,
+                distances=distances,
+                scaling_factors=scaling_factors,
+                intensities=intensities,
+                ambient_color=ambient_color
+        )
+        
+        return images
     
     def loss_dict_forward(self, predictions, adversarial_textures):
         loss_dict = {}
