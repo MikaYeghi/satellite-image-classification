@@ -14,7 +14,7 @@ from pytorch3d.structures import join_meshes_as_batch
 from renderer import Renderer
 from evaluator import SatEvaluator
 from losses import BCELoss, ColorForce, BCEColor, ClassificationScore, TVCalculator
-from utils import blend_images, load_descriptive_colors, load_meshes, sample_random_elev_azimuth
+from utils import blend_images, load_descriptive_colors, load_meshes, sample_random_elev_azimuth, randomly_move_and_rotate_meshes
 
 import pdb
 
@@ -529,16 +529,6 @@ class UnifiedTexturesAttacker(BaseAttacker):
         
         # Randomly select a mesh from the list of meshes
         meshes = random.sample(self.meshes, len(empty_images_batch))
-        meshes = join_meshes_as_batch(meshes).to(self.device)
-        
-        # Replace the texture maps
-        meshes.textures._maps_padded = adv_textures.repeat(batch_size, 1, 1, 1)
-        
-        # Offset the vehicle if non-centered
-        if centered:
-            pass
-        else:
-            raise NotImplementedError
         
         # Sample rendering parameters
         distances = [5.0] * batch_size
@@ -554,8 +544,19 @@ class UnifiedTexturesAttacker(BaseAttacker):
             scaling_factors[i] *= random.uniform(0.70, 0.80)
         intensities = torch.ones(size=(batch_size, 3), device=self.device)
         for i in range(batch_size):
-            intensities[i] *= random.uniform(0.70, 0.80)
+            intensities[i] *= random.uniform(0.50, 2.0)
         ambient_color = ((0.05, 0.05, 0.05),)
+        
+        # Offset the vehicles if non-centered
+        if centered:
+            pass
+        else:
+            scaling_factors_ = [scaling_factor.unique().item() for scaling_factor in scaling_factors]
+            meshes = randomly_move_and_rotate_meshes(meshes, scaling_factors_, device=self.device)
+        meshes = join_meshes_as_batch(meshes).to(self.device)
+        
+        # Replace the texture maps
+        meshes.textures._maps_padded = adv_textures.repeat(batch_size, 1, 1, 1)
         
         # Render the image
         images = self.renderer.render_batch(

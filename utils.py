@@ -3,6 +3,7 @@ import glob
 import math
 import shutil
 import pickle
+import random
 from torch import nn
 from matplotlib import pyplot as plt
 import torch
@@ -12,6 +13,7 @@ from tqdm import tqdm
 from pytorch3d.io import load_objs_as_meshes
 from sklearn.model_selection import train_test_split
 from pathlib import Path
+from pytorch3d.transforms import euler_angles_to_matrix
 
 import pdb
 
@@ -356,3 +358,26 @@ def load_checkpoint(cfg, device='cuda'):
     
     model.to(device)
     return (epoch, iter_counter, model)
+
+def randomly_move_and_rotate_meshes(meshes, scaling_factors, device='cuda'):
+    meshes_ = []
+    for i in range(len(meshes)):
+        mesh = meshes[i].to(device)
+        scaling_factor = scaling_factors[i]
+        
+        # Apply random rotation
+        mesh_rotation = euler_angles_to_matrix(torch.tensor([0, random.uniform(0, 2 * math.pi), 0]), convention="XYZ").to(device)
+        mesh_rotation = torch.matmul(mesh_rotation, mesh.verts_packed().data.T).T - mesh.verts_packed()
+        mesh.offset_verts_(vert_offsets_packed=mesh_rotation)
+
+        # Apply random translation (forcing the center of the vehicle to stay in the image)
+        mesh_dx = random.uniform(-1, 1) / scaling_factor
+        mesh_dz = random.uniform(-1, 1) / scaling_factor
+        mesh_dx -= torch.mean(mesh.verts_padded(), dim=1)[0][0].item()
+        mesh_dz -= torch.mean(mesh.verts_padded(), dim=1)[0][2].item()
+        mesh_translation = torch.tensor([mesh_dx, 0, mesh_dz], device=device) * torch.ones(size=mesh.verts_padded().shape[1:], device=device)
+        mesh.offset_verts_(vert_offsets_packed=mesh_translation)
+        
+        meshes_.append(mesh.clone().to(device))
+        
+    return meshes_
