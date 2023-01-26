@@ -83,8 +83,8 @@ if NUM_GPUS == 1:
 else:
     NUM_DATALOADER_WORKERS = 8
 BATCH_SIZE = 1024
-MODEL_WEIGHTS = None
-# MODEL_WEIGHTS = "saved_models/synthetic-adversarial-vgg/2/model_final.pt"
+# MODEL_WEIGHTS = None
+MODEL_WEIGHTS = "saved_models/synthetic-augmented-vgg/model_final.pth"
 NUM_CLASSES = 1 # number of foreground classes
 LR = 0.000005
 N_EPOCHS = 5
@@ -129,7 +129,7 @@ ATTACK_LR = 0.1
 HEATMAP_NAME = "corr_heatmap"
 VISUALIZE_HEATMAP_SAMPLES = False
 ATTACKED_PARAMS = ['pixelated-textures']
-ADVERSARIAL_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Adversarial-proba"
+ADVERSARIAL_SAVE_DIR = "/home/myeghiaz/Storage/UniText-0.125m-50px-centered"
 ATTACKED_PIXELATED_TEXTURE_BLOCK_SIZE = 32
 NUM_ADV_IMGS = 10 # Number of adversarial images that will be generated during the attack
 ATTACK_LOSS_FUNCTION = "classcore+TV"
@@ -138,7 +138,7 @@ ATTACK_LOSS_FUNCTION_PARAMETERS = {
     "TV-coefficient": 1.0,
     "classcore-coefficient": 0.001
 }
-ATTACK_N_EPOCHS = 5
+ATTACK_N_EPOCHS = 1
 ATTACK_BATCH_SIZE = 512
 ATTACK_BASE_LR = 0.1
 ATTACK_LR_GAMMA = 0.3

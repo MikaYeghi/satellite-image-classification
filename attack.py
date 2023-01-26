@@ -17,12 +17,15 @@ import pdb
 """Load the data set and remove all positive samples"""
 transforms = SatTransforms()
 train_transform = transforms.get_train_transforms()
+test_transform = transforms.get_test_transforms()
 train_set = SatelliteDataset(cfg.TRAIN_PATH, transform=train_transform, device=device)
+test_set = SatelliteDataset(cfg.TEST_PATH, transform=test_transform, device=device)
 # train_set.remove_positives()
 
 """K-means analysis"""
 # train_set.remove_positives()
-# train_set.leave_fraction_of_negatives(0.1)
+# train_set.leave_fraction_of_negatives(0.01)
+# test_set.leave_fraction_of_negatives(0.01)
 # train_set.KMeansAnalysis(K_max=10)
 # exit()
 
@@ -34,12 +37,12 @@ train_set = SatelliteDataset(cfg.TRAIN_PATH, transform=train_transform, device=d
 _, _, model = load_checkpoint(cfg, device)
 
 """Initialize the attacker"""
-attacker = UnifiedTexturesAttacker(model, train_set, cfg, device=device)
+attacker = UnifiedTexturesAttacker(model, train_set, test_set, cfg, device=device)
 print(attacker)
 
 """Perform the attack"""
 adversarial_texture_map = attacker.attack()
-
+attacker.evaluate()
 exit()
 
 """Loop through all possible negative samples"""

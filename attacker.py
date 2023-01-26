@@ -11,6 +11,7 @@ from torch.utils.tensorboard import SummaryWriter
 from pytorch3d.structures import join_meshes_as_batch
 
 from renderer import Renderer
+from evaluator import SatEvaluator
 from losses import BCELoss, ColorForce, BCEColor, ClassificationScore, TVCalculator
 from utils import blend_images, load_descriptive_colors, load_meshes, sample_random_elev_azimuth
 
@@ -304,12 +305,13 @@ class FGSMAttacker(BaseAttacker):
         return len(self.adversarial_examples_list)
     
 class UnifiedTexturesAttacker(BaseAttacker):
-    def __init__(self, model, attack_set, cfg, device='cuda'):
+    def __init__(self, model, attack_set, eval_set, cfg, device='cuda'):
         super().__init__(model, cfg, device)
         
         # Load the meshes
         self.cfg = cfg
-        self.attack_set = self.prepare_attack_set(attack_set)
+        self.attack_set = self.prepare_dataset(attack_set)
+        self.eval_set = self.prepare_dataset(eval_set)
         self.meshes = load_meshes(cfg, device='cpu')
         self.device = device
         
@@ -325,18 +327,18 @@ class UnifiedTexturesAttacker(BaseAttacker):
         text += "-" * 80
         return text
     
-    def prepare_attack_set(self, attack_set):
+    def prepare_dataset(self, dataset):
         """
-        Preprocess the dataset which is used for attacking the model.
-        Need to remove positive samples, since images are generated on the fly during the attack.
+        Preprocess the dataset which is used for attacking/evaluating the model.
+        Need to remove positive samples, since images are generated on the fly during the attack/evaluation.
         
         inputs:
-            - attack_set: an object of class SatelliteDataset
+            - dataset: an object of class SatelliteDataset
         outputs:
-            - attack_set: an object of class SatelliteDataset without positive samples
+            - dataset: an object of class SatelliteDataset without positive samples
         """
-        attack_set.remove_positives()
-        return attack_set
+        dataset.remove_positives()
+        return dataset
     
     def get_loss_fns(self, cfg):
         """
@@ -363,9 +365,7 @@ class UnifiedTexturesAttacker(BaseAttacker):
         Perform adversarial attack to obtain a unified adversarial texture map.
         """
         # Initialize the attacked texture map as a random map
-        textures_activation = torch.nn.Sigmoid()
         adv_textures = torch.randn(size=self.meshes[0].textures.maps_padded().shape, device=self.device)
-        adv_textures = textures_activation(adv_textures)
         adv_textures.requires_grad_(True)
         
         # Dataloader
@@ -383,7 +383,7 @@ class UnifiedTexturesAttacker(BaseAttacker):
         for epoch in range(self.cfg.ATTACK_N_EPOCHS):
             progress_bar = tqdm(attack_set_loader, desc=f"Epoch #{epoch + 1}")
             for empty_images_batch, _ in progress_bar:
-                # Generate an image with a vehicle in it
+                # Generate a batch of images with a vehicle in it
                 images_batch = self.render_images_batch(empty_images_batch, adv_textures, centered=self.cfg.CENTERED_IMAGES_ATTACK)
                 
                 # Generate predictions
@@ -420,11 +420,49 @@ class UnifiedTexturesAttacker(BaseAttacker):
         writer.flush()
         writer.close()
         
-        # Save the unified texture map [TO DO: CHANGE THE SAVE DIR TO ADVERSARIAL_ATTACKS_SAVE_DIR]
+        # Save the unified texture map
+        self.adv_textures = adv_textures[0].clone().detach().cpu()
         transform_tensor_to_pil = torchvision.transforms.ToPILImage()
         adv_textures_PIL = transform_tensor_to_pil(adv_textures[0].permute(2, 0, 1))
-        adv_textures_PIL.save(os.path.join(self.cfg.OUTPUT_DIR, "unified_adversarial_textures.png"))
+        adv_textures_PIL.save(os.path.join(self.cfg.ADVERSARIAL_SAVE_DIR, "unified_adversarial_textures.png"))
+    
+    def evaluate(self, centered=True):
+        """
+        Evaluate the adversariality of the attack.
+        """
+        # Initialize the evaluator
+        evaluator = SatEvaluator(device=self.device, pos_label=0, save_dir=self.cfg.ADVERSARIAL_SAVE_DIR)
         
+        # Initialize the adversarial texture map
+        adv_textures = self.adv_textures.clone().unsqueeze(0).to(self.device)
+        
+        # Initialize the dataloader
+        eval_set_loader = DataLoader(self.eval_set, batch_size=self.cfg.ATTACK_BATCH_SIZE, shuffle=True)
+        
+        for empty_images_batch, labels_batch in tqdm(eval_set_loader):
+            # Generate a batch of images with a vehicle in it
+            images_batch = self.render_images_batch(empty_images_batch, adv_textures, centered=self.cfg.CENTERED_IMAGES_ATTACK)
+            
+            # Generate predictions
+            self.model.eval()
+            preds = self.model(images_batch)
+            preds = self.activation(preds)
+            preds = (preds > 0.5).float()
+            
+            # Record predictions
+            labels_batch = (1 - labels_batch).unsqueeze(1).to(self.device) # Class 0 is vehicles, class 1 is background
+            evaluator.record_preds_gt(preds, labels_batch)
+            
+        # Extract numbers
+        accuracy = evaluator.evaluate_accuracy()
+        F1 = evaluator.evaluate_f1()
+        
+        # Print the results [MOVE THE CODE BELOW INTO EVALUATOR CLASS]
+        results_text = f"Accuracy: {round(100 * accuracy, 2)}%.\nF1-score: {round(100 * F1, 2)}%."
+        print(results_text)
+        with open(os.path.join(self.cfg.ADVERSARIAL_SAVE_DIR, "results.txt"), 'w') as f:
+            f.write(results_text)
+    
     def render_image(self, empty_image, adv_textures, centered=True):
         """
         Render an image, where the vehicle has the unified texture map (adv_textures).
