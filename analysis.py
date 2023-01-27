@@ -3,7 +3,11 @@ import torch
 import pickle
 from tqdm import tqdm
 from PIL import Image
+from lib.gmm.gmm import GaussianMixture
 from torchvision.transforms.functional import pil_to_tensor
+
+from dataset import SatelliteDataset
+from transforms import SatTransforms
 
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
@@ -54,12 +58,57 @@ def get_num_vehicles_distribution(annotations_dir):
         text += f"{num_vehicles} vehicles: {num_vehicles_distribution[num_vehicles]}\n"
     text += f"Total: {total_num_vehicles}"
     print(text)
-    pdb.set_trace()
+    
+def pixels_EM_analysis(data_path):
+    pixels = torch.empty(size=(0, 3), device='cuda')
+    
+    # Initialize the dataset
+    transforms = SatTransforms()
+    test_transform = transforms.get_test_transforms()
+    train_set = SatelliteDataset([data_path], transform=test_transform, device='cuda')
+    train_set.remove_positives()
+    train_set.leave_fraction_of_negatives(0.1)
+    print(train_set.details())
+    
+    # Extract pixel values
+    print("Extracting pixel values...")
+    for image, _ in tqdm(train_set):
+        image = image.permute(1, 2, 0)
+        
+        # Get the pixel values
+        pixels_ = image.view(-1, 3)
+        pixels = torch.cat((pixels, pixels_))
+    
+    # Initialize the GMM model
+    n_components = 5
+    n_features = 3
+    model = GaussianMixture(n_components, n_features)
+    
+    # Fit the data
+    print("Fitting the GMM model to the data...")
+    model = model.cuda()
+    pixels = pixels.cuda()
+    model.fit(pixels)
+    
+    # Extract the results
+    mu = model.mu.squeeze()
+    var = model.var.squeeze()
+    pi = model.pi.squeeze()
+    
+    # Save the results
+    print("Saving the results...")
+    torch.save(mu, "results/mus.pt")
+    torch.save(var, "results/vars.pt")
+    torch.save(pi, "results/pis.pt")
                 
 """Analyze the unique colors in camouflages"""
 # camouflages_dir = "/home/myeghiaz/Storage/organic-camouflages"
 # analyze_camouflage_unique_colors(camouflages_dir, device=device)
 
 """Extract the distribution of the number of vehicles in the non-centered dataset"""
-annotations_dir = "/home/myeghiaz/Storage/GSD-0.125m_sample-size-50_mean-sampling-freq-1/annotations"
-get_num_vehicles_distribution(annotations_dir)
+# annotations_dir = "/home/myeghiaz/Storage/GSD-0.125m_sample-size-50_mean-sampling-freq-1/annotations"
+# get_num_vehicles_distribution(annotations_dir)
+
+"""Perform EM on data pixels"""
+data_path = "/home/myeghiaz/Storage/SatClass-Real-0.125m-50px/train"
+pixels_EM_analysis(data_path)
