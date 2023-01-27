@@ -1,8 +1,12 @@
+import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.distributions import multivariate_normal
 
 import config as cfg
+
+import pdb
 
 def BCELoss():
     return torch.nn.BCELoss()
@@ -101,3 +105,39 @@ class TVCalculator(nn.Module):
  
             tv += tvcomp1 + tvcomp2
         return self.coefficient * tv / torch.numel(adv_patch)
+    
+class GMMLoss(nn.Module):
+    """
+    Module to calculate the GMM loss, which is the negative log likelihood of the GMM pdf.
+    """
+    def __init__(self, mus, variances, pis, dimensions=3, coefficient=1.0, device='cuda'):
+        super(GMMLoss, self).__init__()
+        assert len(mus) == len(variances) == len(pis), "Number of mu-s, variances and pi-s must match."
+        self.n_components = len(mus)
+        self.coefficient = coefficient
+        self.mus = mus
+        self.variances = variances
+        self.pis = pis
+        self.dimensions = dimensions
+        self.device = device
+        
+    def forward(self, predictions, adv_patch):
+        loss = 0
+        for i in range(self.n_components):
+            # Obtain distribution parameters
+            mu = self.mus[i].to(self.device)
+            variance = self.variances[i].to(self.device)
+            pi = self.pis[i].to(self.device)
+            
+            # Form the input vector
+            x = adv_patch.view(-1, 3)
+            
+            # Compute the value of the gaussian
+            loss += pi * torch.mean(self.gaussian_function(x, mu, variance))
+        loss = -torch.log(loss)
+        return self.coefficient * loss
+    
+    def gaussian_function(self, x, mu, variance):
+        dist = multivariate_normal.MultivariateNormal(loc=mu, covariance_matrix=variance)
+        probability = torch.exp(dist.log_prob(x))
+        return probability

@@ -13,7 +13,7 @@ from pytorch3d.structures import join_meshes_as_batch
 
 from renderer import Renderer
 from evaluator import SatEvaluator
-from losses import BCELoss, ColorForce, BCEColor, ClassificationScore, TVCalculator
+from losses import BCELoss, ColorForce, BCEColor, ClassificationScore, TVCalculator, GMMLoss
 from utils import blend_images, load_descriptive_colors, load_meshes, sample_random_elev_azimuth, randomly_move_and_rotate_meshes
 
 import pdb
@@ -305,6 +305,8 @@ class FGSMAttacker(BaseAttacker):
     def get_num_pairs(self):
         return len(self.adversarial_examples_list)
     
+    
+"""UNIFIED TEXTURE ATTACKER"""
 class UnifiedTexturesAttacker(BaseAttacker):
     def __init__(self, model, attack_set, eval_set, cfg, device='cuda'):
         super().__init__(model, cfg, device)
@@ -313,9 +315,13 @@ class UnifiedTexturesAttacker(BaseAttacker):
         self.cfg = cfg
         self.attack_set = self.prepare_dataset(attack_set)
         self.eval_set = self.prepare_dataset(eval_set)
+        self.eval_save_dir = os.path.join(self.cfg.ADVERSARIAL_SAVE_DIR, "evaluation")
         self.meshes = load_meshes(cfg, device='cpu')
         self.adv_textures = self.load_adv_textures(cfg)
         self.device = device
+        
+        # Create the requires directories
+        Path(self.eval_save_dir).mkdir(parents=True, exist_ok=True)
         
         # Set up the attack loss function
         self.loss_fns = self.get_loss_fns(cfg)
@@ -344,6 +350,7 @@ class UnifiedTexturesAttacker(BaseAttacker):
     
     def load_adv_textures(self, cfg):
         if cfg.UNIFIED_TEXTURES_PATH:
+            print(f"Loading adversarial textures from {cfg.UNIFIED_TEXTURES_PATH}")
             adv_textures = Image.open(cfg.UNIFIED_TEXTURES_PATH)
             adv_textures = adv_textures.convert('RGB')
             adv_textures = torchvision.transforms.functional.pil_to_tensor(adv_textures)
@@ -352,6 +359,7 @@ class UnifiedTexturesAttacker(BaseAttacker):
             adv_textures = adv_textures.to(self.device)
             return adv_textures
         else:
+            print("Random initialization of the texture map.")
             return None
     
     def get_loss_fns(self, cfg):
@@ -372,12 +380,20 @@ class UnifiedTexturesAttacker(BaseAttacker):
         if "TV" in loss_fn_keyword:
             loss_fn = TVCalculator(coefficient=loss_fn_parameters['TV-coefficient'])
             loss_fns_dict['TV'] = loss_fn
+        if "GMMLoss" in loss_fn_keyword:
+            GMM_dir = self.cfg.ATTACK_LOSS_FUNCTION_PARAMETERS["GMMLoss-directory"]
+            mus = torch.load(os.path.join(GMM_dir, "mus.pt"))
+            variances = torch.load(os.path.join(GMM_dir, "vars.pt"))
+            pis = torch.load(os.path.join(GMM_dir, "pis.pt"))
+            loss_fn = GMMLoss(mus, variances, pis, coefficient=self.cfg.ATTACK_LOSS_FUNCTION_PARAMETERS['GMM-coefficient'], device=self.device)
+            loss_fns_dict['GMMLoss'] = loss_fn
         return loss_fns_dict
     
     def attack(self):
         """
         Perform adversarial attack to obtain a unified adversarial texture map.
         """
+        print("Performing unified adversarial attack on textures.")
         # Initialize the attacked texture map as a random map
         adv_textures = torch.randn(size=self.meshes[0].textures.maps_padded().shape, device=self.device)
         adv_textures.requires_grad_(True)
@@ -445,9 +461,10 @@ class UnifiedTexturesAttacker(BaseAttacker):
         Evaluate the adversariality of the attack.
         """
         assert self.adv_textures is not None, "No adversarial textures loaded!"
+        print("Running evaluation of the adversarial texture map.")
         
-        # Initialize the evaluator
-        evaluator = SatEvaluator(device=self.device, pos_label=0, save_dir=self.cfg.ADVERSARIAL_SAVE_DIR)
+        # Initialize the evaluator        
+        evaluator = SatEvaluator(device=self.device, pos_label=0, save_dir=self.eval_save_dir)
         
         # Initialize the adversarial texture map
         adv_textures = self.adv_textures.clone().unsqueeze(0).to(self.device)

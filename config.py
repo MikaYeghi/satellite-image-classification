@@ -98,7 +98,7 @@ EVAL_ONLY = False
 FP_FN_analysis = True
 APPLY_TRAIN_TRANSFORMS = True
 MODEL_NAME = 'vgg16'
-FOCAL_LOSS = {"alpha": 0.35, "gamma": 2}
+FOCAL_LOSS = {"alpha": 0.01, "gamma": 2}
 SHUFFLE = True
 
 """Generating a train-test dataset from raw dataset"""
@@ -138,11 +138,13 @@ ATTACK_LOSS_FUNCTION = "classcore+TV"
 ATTACK_LOSS_FUNCTION_PARAMETERS = {
     "classcore": 0,
     "TV-coefficient": 1.0,
-    "classcore-coefficient": 0.001
+    "classcore-coefficient": 0.001,
+    "GMM-coefficient": 0.001,
+    "GMMLoss-directory": "/home/myeghiaz/Storage/UniText-0.125m-50px-non-centered/gmm-results"
 }
-ATTACK_N_EPOCHS = 1
+ATTACK_N_EPOCHS = 5
 ATTACK_BATCH_SIZE = 512
 ATTACK_BASE_LR = 0.1
 ATTACK_LR_GAMMA = 0.3
 CENTERED_IMAGES_ATTACK = False
-UNIFIED_TEXTURES_PATH = None
+UNIFIED_TEXTURES_PATH = "/var/storage/myeghiaz/UniText-0.125m-50px-non-centered/unified_adversarial_textures.png"
