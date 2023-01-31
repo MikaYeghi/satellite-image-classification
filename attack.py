@@ -24,8 +24,8 @@ test_set = SatelliteDataset(cfg.TEST_PATH, transform=test_transform, device=devi
 
 """K-means analysis"""
 # train_set.remove_positives()
-# train_set.leave_fraction_of_negatives(0.01)
-# test_set.leave_fraction_of_negatives(0.01)
+# train_set.leave_fraction_of_negatives(0.05)
+# test_set.leave_fraction_of_negatives(0.05)
 # train_set.KMeansAnalysis(K_max=10)
 # exit()
 
@@ -41,7 +41,7 @@ attacker = UnifiedTexturesAttacker(model, train_set, test_set, cfg, device=devic
 print(attacker)
 
 """Perform the attack"""
-adversarial_texture_map = attacker.attack()
+# adversarial_texture_map = attacker.attack()
 attacker.evaluate()
 exit()
 

@@ -13,7 +13,7 @@ from pytorch3d.structures import join_meshes_as_batch
 
 from renderer import Renderer
 from evaluator import SatEvaluator
-from losses import BCELoss, ColorForce, BCEColor, ClassificationScore, TVCalculator, GMMLoss
+from losses import BCELoss, ColorForce, BCEColor, ClassificationScore, TVCalculator, GMMLoss, NonPrintabilityScore
 from utils import blend_images, load_descriptive_colors, load_meshes, sample_random_elev_azimuth, randomly_move_and_rotate_meshes
 
 import pdb
@@ -380,6 +380,10 @@ class UnifiedTexturesAttacker(BaseAttacker):
         if "TV" in loss_fn_keyword:
             loss_fn = TVCalculator(coefficient=loss_fn_parameters['TV-coefficient'])
             loss_fns_dict['TV'] = loss_fn
+        if "NPS" in loss_fn_keyword:
+            NPS_colors = torch.load(self.cfg.ATTACK_LOSS_FUNCTION_PARAMETERS['NPS-colors-path'])
+            loss_fn = NonPrintabilityScore(NPS_colors, coefficient=loss_fn_parameters['NPS-coefficient'], device=self.device)
+            loss_fns_dict['NPS'] = loss_fn
         if "GMMLoss" in loss_fn_keyword:
             GMM_dir = self.cfg.ATTACK_LOSS_FUNCTION_PARAMETERS["GMMLoss-directory"]
             mus = torch.load(os.path.join(GMM_dir, "mus.pt"))
@@ -587,6 +591,10 @@ class UnifiedTexturesAttacker(BaseAttacker):
                 intensities=intensities,
                 ambient_color=ambient_color
         )
+        
+        # for image in images:
+        #     save_image(image, f"results/image_{random.randint(0, 100000000)}.jpg")
+        # pdb.set_trace()
         
         return images
     

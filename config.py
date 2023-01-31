@@ -2,7 +2,7 @@ import os
 shape_code = "x1.3z1.3"
 
 """Dataset parameters"""
-DATASET_NAMES = ['real']
+DATASET_NAMES = ['non-centered-no-margin']
 TRAIN_PATH = []
 TEST_PATH = []
 if "real" in DATASET_NAMES:
@@ -77,7 +77,7 @@ if "modified-shapes" in DATASET_NAMES:
 # TRAIN_PATH.append("/home/myeghiaz/Storage/organic-camouflages-dataset-style/Cam-1")
 
 """Training and testing parameters"""
-NUM_GPUS = 1
+NUM_GPUS = 2
 if NUM_GPUS == 1:
     NUM_DATALOADER_WORKERS = 0
 else:
@@ -90,11 +90,10 @@ LR = 0.000005
 N_EPOCHS = 5
 TEST_SIZE = 0.2
 VAL_FREQ = 1
-# OUTPUT_DIR = f"/home/myeghiaz/Storage/modified-shape-datasets/results/{shape_code}"
 OUTPUT_DIR = "output/"
 RESULTS_DIR = "results/"
 LOG_DIR = os.path.join(OUTPUT_DIR, "logs")
-EVAL_ONLY = False
+EVAL_ONLY = True
 FP_FN_analysis = True
 APPLY_TRAIN_TRANSFORMS = True
 MODEL_NAME = 'vgg16'
@@ -129,22 +128,24 @@ ATTACK_LR = 0.1
 HEATMAP_NAME = "corr_heatmap"
 VISUALIZE_HEATMAP_SAMPLES = False
 ATTACKED_PARAMS = ['pixelated-textures']
-ADVERSARIAL_SAVE_DIR = "/home/myeghiaz/Storage/UniText-0.125m-50px-non-centered"
+ADVERSARIAL_SAVE_DIR = "/home/myeghiaz/Storage/UniText-0.125m-50px-synthetic-non-centered-TV-NPS"
 ATTACKED_PIXELATED_TEXTURE_BLOCK_SIZE = 32
 NUM_ADV_IMGS = 10 # Number of adversarial images that will be generated during the attack
 
 """Unified texture attack parameters"""
-ATTACK_LOSS_FUNCTION = "classcore+TV"
+ATTACK_LOSS_FUNCTION = "classcore+TV+NPS"
 ATTACK_LOSS_FUNCTION_PARAMETERS = {
-    "classcore": 0,
-    "TV-coefficient": 1.0,
+    "TV-coefficient": 2.0,
     "classcore-coefficient": 0.001,
+    "NPS-coefficient": 0.002,
     "GMM-coefficient": 0.001,
+    "classcore": 0,
+    "NPS-colors-path": "/var/storage/myeghiaz/UniText-0.125m-50px-centered/NPS/printable_colors.pth",
     "GMMLoss-directory": "/home/myeghiaz/Storage/UniText-0.125m-50px-non-centered/gmm-results"
 }
-ATTACK_N_EPOCHS = 5
 ATTACK_BATCH_SIZE = 512
+ATTACK_N_EPOCHS = 3
 ATTACK_BASE_LR = 0.1
 ATTACK_LR_GAMMA = 0.3
 CENTERED_IMAGES_ATTACK = False
-UNIFIED_TEXTURES_PATH = "/var/storage/myeghiaz/UniText-0.125m-50px-non-centered/unified_adversarial_textures.png"
+UNIFIED_TEXTURES_PATH = "/var/storage/myeghiaz/UniText-0.125m-50px-synthetic-non-centered-TV-NPS/unified_adversarial_textures.png"

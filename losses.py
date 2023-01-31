@@ -141,3 +141,21 @@ class GMMLoss(nn.Module):
         dist = multivariate_normal.MultivariateNormal(loc=mu, covariance_matrix=variance)
         probability = torch.exp(dist.log_prob(x))
         return probability
+    
+class NonPrintabilityScore(nn.Module):
+    """
+    Non-printability score as defined in "Physical Adversarial Attacks on an Aerial Imagery Object Detector".
+    """
+    def __init__(self, printable_colors, coefficient=1.0, device='cuda'):
+        super(NonPrintabilityScore, self).__init__()
+        self.printable_colors = printable_colors.to(device)
+        self.coefficient = coefficient
+        self.device = device
+        
+    def forward(self, predictions, adv_patch):
+        nps = 0
+        adv_patch_pixels = adv_patch.view(-1, 3) # Flatten the adversarial patch
+        distances_matrix = torch.cdist(adv_patch_pixels, self.printable_colors)
+        closest_distances = torch.min(distances_matrix, dim=1)[0]
+        nps = torch.mean(closest_distances)
+        return self.coefficient * nps
