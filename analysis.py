@@ -1,14 +1,19 @@
+import os
 import glob
 import torch
 import pickle
+import torch.nn as nn
 from tqdm import tqdm
 from PIL import Image
+from matplotlib import pyplot as plt
 from lib.gmm.gmm import GaussianMixture
 from torchvision.transforms.functional import pil_to_tensor
 
 from dataset import SatelliteDataset
 from transforms import SatTransforms
+from utils import load_checkpoint
 
+import config as cfg
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
 import pdb
@@ -100,7 +105,60 @@ def pixels_EM_analysis(data_path):
     torch.save(mu, "results/mus.pt")
     torch.save(var, "results/vars.pt")
     torch.save(pi, "results/pis.pt")
-                
+    
+def analyze_quadrant_performance(cfg, quadrant_size, anns_dir, data_dir, device):
+    # Initialize the heatmap of correct probabilities
+    assert 50 % quadrant_size == 0, "Image size (50x50) must be divisible by the quadrant size!"
+    heatmap_size = 50 // quadrant_size
+    pred_quadrants = torch.zeros(size=(heatmap_size, heatmap_size))
+    gt_quadrants = torch.zeros(size=(heatmap_size, heatmap_size))
+    
+    # Load the model and the transform
+    _, _, model = load_checkpoint(cfg, device)
+    transforms = SatTransforms()
+    transform = transforms.get_test_transforms()
+    activation = nn.Sigmoid()
+    
+    # Extract files with single vehicles only and run through the model
+    single_vehicle_files = []
+    positive_images_list = glob.glob(data_dir + "/*/positive/*.jpg")
+    for image_path in tqdm(positive_images_list):
+        encoding = image_path.split('/')[-1][:-4]
+        anns_path = os.path.join(anns_dir, f"{encoding}.pkl")
+        
+        # Load the annotations
+        with open(anns_path, 'rb') as f:
+            data = pickle.load(f)
+            anns = data['object_locations']['small'][0]
+            num_vehicles = len(anns)
+        
+        if num_vehicles == 1:
+            # Run the image through the model
+            image = transform(Image.open(image_path).convert('RGB')).unsqueeze(0).to(device)
+            pred = 1 - activation(model(image)) # probability of the correct class
+            
+            # Extract the quadrant coordinates
+            quadrant_coords = (anns // quadrant_size).astype('int').squeeze().tolist()
+            quadrant_x = quadrant_coords[0]
+            quadrant_y = quadrant_coords[1]
+            
+            # Populate the GT heatmap
+            gt_quadrants[quadrant_x][quadrant_y] += 1.0
+            
+            # Populate the prediction heatmap
+            pred_quadrants[quadrant_x][quadrant_y] += pred.item()
+        
+    # Generate and save the correctness heatmap
+    heatmap = torch.div(pred_quadrants, gt_quadrants)
+    plt.imshow(heatmap, cmap='Greys')
+    plt.savefig("results/non-centered-accuracy-heatmap.png", dpi=100)
+    plt.close()
+    
+    # Generate and save the GT quadrants heatmap
+    plt.imshow(gt_quadrants, cmap='Greys')
+    plt.savefig("results/non-centered-GT-heatmap.png", dpi=100)
+    plt.close()
+
 """Analyze the unique colors in camouflages"""
 # camouflages_dir = "/home/myeghiaz/Storage/organic-camouflages"
 # analyze_camouflage_unique_colors(camouflages_dir, device=device)
@@ -110,5 +168,12 @@ def pixels_EM_analysis(data_path):
 # get_num_vehicles_distribution(annotations_dir)
 
 """Perform EM on data pixels"""
-data_path = "/home/myeghiaz/Storage/SatClass-Real-0.125m-50px/train"
-pixels_EM_analysis(data_path)
+# data_path = "/home/myeghiaz/Storage/SatClass-Real-0.125m-50px/train"
+# pixels_EM_analysis(data_path)
+
+"""Analyze model performance on quadrants in non-centered data"""
+quadrant_size = 5
+device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
+anns_dir = "/home/myeghiaz/Storage/GSD-0.125m_sample-size-50_mean-sampling-freq-1/annotations"
+data_dir = "/home/myeghiaz/Storage/SatClass-Real-non-centered-0.125m-50px-no-margin"
+analyze_quadrant_performance(cfg, quadrant_size, anns_dir, data_dir, device)
