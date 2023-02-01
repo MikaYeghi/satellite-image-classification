@@ -41,40 +41,12 @@ if "adversarial-shadows" in DATASET_NAMES:
 if "organic-camouflage-centered" in DATASET_NAMES:
     TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Organic-Camouflages-0.125m-50px/train")
     TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Organic-Camouflages-0.125m-50px/test")
-if "pixelated-camouflage-centered-8" in DATASET_NAMES:
-    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-8/train")
-    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-8/test")
-if "pixelated-camouflage-centered-16" in DATASET_NAMES:
-    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-16/train")
-    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-16/test")
-if "pixelated-camouflage-centered-32" in DATASET_NAMES:
-    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-32/train")
-    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-32/test")
-if "pixelated-camouflage-centered-64" in DATASET_NAMES:
-    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-64/train")
-    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-64/test") 
-if "pixelated-random-camouflage-centered-8" in DATASET_NAMES:
-    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-8/train")
-    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-8/test")
-if "pixelated-random-camouflage-centered-16" in DATASET_NAMES:
-    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-16/train")
-    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-16/test")
-if "pixelated-random-camouflage-centered-32" in DATASET_NAMES:
-    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-32/train")
-    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-32/test")
-if "pixelated-random-camouflage-centered-64" in DATASET_NAMES:
-    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-64/train")
-    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-64/test")
-if "pixelated-random-camouflage-centered-16-lightened" in DATASET_NAMES:
-    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-16-light-intensity:0.5-1.0/train")
-    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-16-light-intensity:0.5-1.0/test")
-if "organic-recolored-camouflage-centered" in DATASET_NAMES:
-    TRAIN_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Organic-Recolored-Camouflages-0.125m-50px/train")
-    TEST_PATH.append("/home/myeghiaz/Storage/SatClass-Synthetic-Organic-Recolored-Camouflages-0.125m-50px/test")
-if "modified-shapes" in DATASET_NAMES:
-    TRAIN_PATH.append(f"/home/myeghiaz/Storage/modified-shape-datasets/SatClass-Synthetic-Modified-Shapes-0.125m-50px/{shape_code}/train")
-    TEST_PATH.append(f"/home/myeghiaz/Storage/modified-shape-datasets/SatClass-Synthetic-Modified-Shapes-0.125m-50px/{shape_code}/test")
-# TRAIN_PATH.append("/home/myeghiaz/Storage/organic-camouflages-dataset-style/Cam-1")
+if f"pixelated-camouflage-centered-{block_size}" in DATASET_NAMES:
+    TRAIN_PATH.append(f"/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-{block_size}/train")
+    TEST_PATH.append(f"/home/myeghiaz/Storage/SatClass-Synthetic-Pixelated-Camouflages-0.125m-50px-block-{block_size}/test")
+if f"pixelated-random-camouflage-centered-{block_size}" in DATASET_NAMES:
+    TRAIN_PATH.append(f"/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-{block_size}/train")
+    TEST_PATH.append(f"/home/myeghiaz/Storage/SatClass-Synthetic-Random-Pixelated-Camouflages-0.125m-50px-block-{block_size}/test")
 
 """Training and testing parameters"""
 NUM_GPUS = 2
