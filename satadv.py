@@ -432,7 +432,7 @@ class SatAdv(nn.Module):
             elevation, azimuth = (90, 0)
             lights_direction = torch.tensor([random.uniform(-1, 1),-1.0,random.uniform(-1, 1)], device=self.device, requires_grad=True).unsqueeze(0)
             scaling_factor = random.uniform(0.70, 0.80)
-            intensity = random.uniform(0.0, 1.0)
+            intensity = random.uniform(0.5, 2.0)
             
             # Randomly move and rotate the meshes 
             # mesh = self.randomly_move_and_rotate_meshes(mesh, scaling_factor, positive_counter)
@@ -453,6 +453,7 @@ class SatAdv(nn.Module):
             save_dir = os.path.join(self.cfg.SYNTHETIC_SAVE_DIR, dataset_type, "positive", f"image_{positive_counter}.png")
             save_image(synthetic_image.permute(2, 0, 1), save_dir)
             positive_counter += 1
+            
         print(f"Generated {positive_counter} positive images and {negative_counter} negative images.")
     
     def generate_non_centered_synthetic_dataset(self, train_set, test_set):

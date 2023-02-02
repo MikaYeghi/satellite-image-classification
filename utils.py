@@ -4,6 +4,7 @@ import math
 import shutil
 import pickle
 import random
+import numpy as np
 from torch import nn
 from matplotlib import pyplot as plt
 import torch
@@ -161,7 +162,7 @@ def get_lightdir_from_elaz(elev, azim, device='cuda'):
     xyz = torch.tensor([x, y, z], device=device).unsqueeze(0)
     return xyz
 
-def generate_dataset_from_raw(dataset_dir, save_dir):
+def generate_dataset_from_raw(dataset_dir, save_dir, circular_margin=False):
     """
     This function converts a dataset with vehicle location annotations (basically, a detection dataset) into a 
     classification dataset. Images which contain at least one sample of the "small vehicle" are marked as positive,
@@ -170,7 +171,7 @@ def generate_dataset_from_raw(dataset_dir, save_dir):
     # Extract images and annotations names
     annotations_dir = os.path.join(dataset_dir, "annotations")
     images_dir = os.path.join(dataset_dir, "images")
-    annotation_files = [annotation_file.split('/')[-1] for annotation_file in glob.glob(annotations_dir + "/*.pkl")]
+    annotation_files = [annotation_file.split('/')[-1] for annotation_file in tqdm(glob.glob(annotations_dir + "/*.pkl"))]
     
     # Create the save directories
     trainpos_dir = os.path.join(save_dir, "train", "positive")
@@ -198,7 +199,18 @@ def generate_dataset_from_raw(dataset_dir, save_dir):
         is_positive = False
         is_test = False
         if len(annotations['object_locations']['small'][0]) > 0:
-            is_positive = True
+            if circular_margin:
+                # Check that at least one vehicle is inside the circle that's inscribed into the image
+                circle_radius = 25 # Since the image size is 50x50
+                # print(f"Car centers:\n{annotations['object_locations']['small'][0]}")
+                distances = np.square(annotations['object_locations']['small'][0] - circle_radius) # wrt image center
+                distances = np.sum(distances, axis=0)
+                distances = np.sqrt(distances)
+                # print(f"Distances:\n{distances}")
+                is_positive = (distances < circle_radius).any()
+                # print(f"Is positive: {is_positive}\n")
+            else:
+                is_positive = True
         if annotation_file.split('_')[0] == "0001":
             is_test = True
         

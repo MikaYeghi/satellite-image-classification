@@ -112,7 +112,7 @@ if __name__ == '__main__':
     train_set = SatelliteDataset(cfg.TRAIN_PATH, transform=train_transform, device=device)
     test_set = SatelliteDataset(cfg.TEST_PATH, transform=test_transform, device=device)
     print(f"Train set. {train_set.details()}\nTest set. {test_set.details()}")
-
+    
     """Create the dataloader"""
     train_loader = DataLoader(train_set, batch_size=cfg.BATCH_SIZE, num_workers=cfg.NUM_DATALOADER_WORKERS, shuffle=cfg.SHUFFLE)
     test_loader = DataLoader(test_set, batch_size=cfg.BATCH_SIZE, num_workers=cfg.NUM_DATALOADER_WORKERS, shuffle=cfg.SHUFFLE)
@@ -122,7 +122,7 @@ if __name__ == '__main__':
     start_epoch, iter_counter, model = load_checkpoint(cfg, device)
 
     """Loss function, optimizer and evaluator"""
-    loss_fn = BCELoss()
+    loss_fn = FocalLoss(alpha=cfg.FOCAL_LOSS['alpha'])
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.LR)
     evaluator = SatEvaluator(device=device, pos_label=0, save_dir=cfg.OUTPUT_DIR)
 

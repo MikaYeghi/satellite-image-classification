@@ -12,7 +12,7 @@ def BCELoss():
     return torch.nn.BCELoss()
 
 def FocalLoss(
-    reduction='none',
+    reduction='mean',
     alpha: float = cfg.FOCAL_LOSS['alpha'],
     gamma: float = cfg.FOCAL_LOSS['gamma']
     ):
@@ -23,7 +23,7 @@ def FocalLoss(
         ce_loss = F.binary_cross_entropy(inputs, targets, reduction="none")
         p_t = inputs * targets + (1 - inputs) * (1 - targets)
         loss = ce_loss * ((1 - p_t) ** gamma)
-
+        
         if alpha >= 0:
             alpha_t = alpha * targets + (1 - alpha) * (1 - targets)
             loss = alpha_t * loss
