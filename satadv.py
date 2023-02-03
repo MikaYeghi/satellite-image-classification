@@ -316,27 +316,46 @@ class SatAdv(nn.Module):
         else:
             return num_vehicles
 
-    def randomly_move_and_rotate_mesh(self, mesh, scaling_factor):
+    def randomly_move_and_rotate_mesh(self, mesh, scaling_factor, circular_margin=False):
         # Apply random rotation
         mesh_rotation = euler_angles_to_matrix(torch.tensor([0, random.uniform(0, 2 * math.pi), 0]), convention="XYZ").to(self.device)
         mesh_rotation = torch.matmul(mesh_rotation, mesh.verts_packed().data.T).T - mesh.verts_packed()
         mesh.offset_verts_(vert_offsets_packed=mesh_rotation)
         
         # Apply random translation (forcing the center of the vehicle to stay in the image)
-        mesh_dx = random.uniform(-1, 1) / scaling_factor
-        mesh_dz = random.uniform(-1, 1) / scaling_factor
+        mesh_dx = random.uniform(-1, 1)
+        mesh_dz = random.uniform(-1, 1)
+        
+        # Record the offset in pixels
+        offset = np.array([mesh_dx, mesh_dz]) * self.cfg.CIRCULAR_MARGIN_SIZE
+        
+        # Continue moving the mesh
+        mesh_dx /= scaling_factor
+        mesh_dz /= scaling_factor
         mesh_dx -= torch.mean(mesh.verts_padded(), dim=1)[0][0].item()
         mesh_dz -= torch.mean(mesh.verts_padded(), dim=1)[0][2].item()
         mesh_translation = torch.tensor([mesh_dx, 0, mesh_dz], device=self.device) * torch.ones(size=mesh.verts_padded().shape[1:], device=self.device)
         mesh.offset_verts_(vert_offsets_packed=mesh_translation)
         
-        return mesh.clone()
+        if not circular_margin:
+            return mesh.clone()
+        else:
+            return (mesh.clone(), offset)
     
     def randomly_place_meshes(self, meshes, distance, elevation, azimuth, lights_direction, scaling_factor, intensity):
         if len(meshes) == 1:
-            return self.randomly_move_and_rotate_mesh(meshes[0], scaling_factor)
+            if self.cfg.CIRCULAR_MARGIN:
+                # Keep generating the mesh until it's within the margin circle
+                outside = True
+                while outside:
+                    mesh, offset = self.randomly_move_and_rotate_mesh(meshes[0], scaling_factor, circular_margin=self.cfg.CIRCULAR_MARGIN)
+                    if np.sqrt(np.sum(np.square(offset))) < self.cfg.CIRCULAR_MARGIN_SIZE:
+                        outside = False
+                return mesh
+            else:
+                return self.randomly_move_and_rotate_mesh(meshes[0], scaling_factor)
         else:
-            intersecting = True
+            invalid_image = True
             # Create the renderer
             ambient_color = ((0.05, 0.05, 0.05),)
             diffuse_color = intensity * torch.tensor([1.0, 1.0, 1.0], device=self.device).unsqueeze(0)
@@ -361,17 +380,30 @@ class SatAdv(nn.Module):
                 ),
                 shader=SoftSilhouetteShader()
             )
-            while intersecting:
+            while invalid_image:
                 silhouettes = []
+                offsets = []
                 for i in range(len(meshes)):
-                    meshes[i] = self.randomly_move_and_rotate_mesh(meshes[i], scaling_factor)
+                    meshes[i], offset = self.randomly_move_and_rotate_mesh(meshes[i], scaling_factor, circular_margin=self.cfg.CIRCULAR_MARGIN)
                     silhouette = silhouette_renderer(meshes[i], cameras=cameras, lights=lights)
                     silhouette = (silhouette[..., 3] > 0.5).float()
                     silhouettes.append(silhouette)
+                    offsets.append(offset)
+                # Check whether any of the meshes intersect
                 if torch.any(reduce(lambda x, y: x + y, silhouettes) > 1.0):
-                    intersecting = True
+                    invalid_image = True
                 else:
-                    intersecting = False
+                    # If circular margin is activated, check that at least one vehicle is inside the inscribed circle
+                    if not self.cfg.CIRCULAR_MARGIN:
+                        invalid_image = False
+                    else:
+                        distances = np.array([np.square(offset) for offset in offsets])
+                        distances = np.sum(distances, axis=1)
+                        distances = np.sqrt(distances)
+                        if (distances < self.cfg.CIRCULAR_MARGIN_SIZE).any():
+                            invalid_image = False
+                        else:
+                            invalid_image = True
             mesh = join_meshes_as_scene(meshes)
             return mesh
 
@@ -435,7 +467,6 @@ class SatAdv(nn.Module):
             intensity = random.uniform(0.5, 2.0)
             
             # Randomly move and rotate the meshes 
-            # mesh = self.randomly_move_and_rotate_meshes(mesh, scaling_factor, positive_counter)
             mesh = self.randomly_place_meshes(sampled_meshes, distance, elevation, azimuth, lights_direction, scaling_factor, intensity)
             
             # Render and save the image

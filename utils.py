@@ -4,6 +4,7 @@ import math
 import shutil
 import pickle
 import random
+import time
 import numpy as np
 from torch import nn
 from matplotlib import pyplot as plt
@@ -162,7 +163,7 @@ def get_lightdir_from_elaz(elev, azim, device='cuda'):
     xyz = torch.tensor([x, y, z], device=device).unsqueeze(0)
     return xyz
 
-def generate_dataset_from_raw(dataset_dir, save_dir, circular_margin=False):
+def generate_dataset_from_raw(dataset_dir, save_dir, circular_margin=False, circle_radius=25):
     """
     This function converts a dataset with vehicle location annotations (basically, a detection dataset) into a 
     classification dataset. Images which contain at least one sample of the "small vehicle" are marked as positive,
@@ -173,6 +174,14 @@ def generate_dataset_from_raw(dataset_dir, save_dir, circular_margin=False):
     images_dir = os.path.join(dataset_dir, "images")
     annotation_files = [annotation_file.split('/')[-1] for annotation_file in tqdm(glob.glob(annotations_dir + "/*.pkl"))]
     
+    """EXTRA CODE START"""
+    # annotation_files = []
+    # for positive_image in glob.glob("/home/myeghiaz/Storage/SatClass-Real-non-centered-0.125m-50px-no-margin/*/positive/*.jpg"):
+    #     image_code = positive_image.split('/')[-1].split('.')[0]
+    #     annotation_file = image_code + ".pkl"
+    #     annotation_files.append(annotation_file)
+    """EXTRA CODE END"""
+    
     # Create the save directories
     trainpos_dir = os.path.join(save_dir, "train", "positive")
     trainneg_dir = os.path.join(save_dir, "train", "negative")
@@ -182,6 +191,22 @@ def generate_dataset_from_raw(dataset_dir, save_dir, circular_margin=False):
     Path(trainneg_dir).mkdir(parents=True, exist_ok=True)
     Path(testpos_dir).mkdir(parents=True, exist_ok=True)
     Path(testneg_dir).mkdir(parents=True, exist_ok=True)
+    
+    """EXTRA CODE START"""
+    # # Copy the negative images
+    # print("Copying the negative samples...")
+    # negative_images = glob.glob("/home/myeghiaz/Storage/SatClass-Real-non-centered-0.125m-50px-no-margin/*/negative/*.jpg")
+    # for negative_image in tqdm(negative_images):
+    #     image_code = negative_image.split('/')[-1].split('.')[0]
+    #     if image_code.split('_')[0] == "0001":
+    #         is_test = True
+    #     else:
+    #         is_test = False
+    #     if is_test:
+    #         shutil.copy(negative_image, testneg_dir)
+    #     else:
+    #         shutil.copy(negative_image, trainneg_dir)
+    """EXTRA CODE END"""
     
     # Sort the images into 4 categories: train/test positive/negative (2*2=4). Copy correspondingly.
     print("Generating the classification dataset...")
@@ -201,14 +226,10 @@ def generate_dataset_from_raw(dataset_dir, save_dir, circular_margin=False):
         if len(annotations['object_locations']['small'][0]) > 0:
             if circular_margin:
                 # Check that at least one vehicle is inside the circle that's inscribed into the image
-                circle_radius = 25 # Since the image size is 50x50
-                # print(f"Car centers:\n{annotations['object_locations']['small'][0]}")
                 distances = np.square(annotations['object_locations']['small'][0] - circle_radius) # wrt image center
                 distances = np.sum(distances, axis=0)
                 distances = np.sqrt(distances)
-                # print(f"Distances:\n{distances}")
                 is_positive = (distances < circle_radius).any()
-                # print(f"Is positive: {is_positive}\n")
             else:
                 is_positive = True
         if annotation_file.split('_')[0] == "0001":
