@@ -15,6 +15,9 @@ from pathlib import Path
 
 import config as cfg
 
+from logger import get_logger
+logger = get_logger()
+
 import pdb
 
 class SatelliteDataset(Dataset):
@@ -32,7 +35,7 @@ class SatelliteDataset(Dataset):
             self.metadata = metadata
         else:
             self.metadata = self.extract_metadata(data_paths, shuffle=shuffle)
-        print(f"Loaded a data set with {self.__len__()} images.")
+        logger.info(f"Loaded a data set with {self.__len__()} images.")
 
     def extract_metadata(self, data_paths, shuffle=True):
         positive_data_paths = [os.path.join(data_path, "positive") for data_path in data_paths]
@@ -176,7 +179,7 @@ class SatelliteDataset(Dataset):
     
     def augment_brightness(self, brightness_levels):
         brightness_levels = [x for x in brightness_levels if x != 0.0] # exclude 0.0 to avoid confusion during training
-        print("Augmenting the data set.")
+        logger.info("Augmenting the data set.")
         new_metadata = []
         for data in tqdm(self.metadata):
             for brightness in brightness_levels:
@@ -228,10 +231,10 @@ class SatelliteDataset(Dataset):
             plt.savefig(save_dir)
         
         assert K_max >= 2, "Number of clusters must be greater than 2."
-        print("Running K-means analysis.")
+        logger.info("Running K-means analysis.")
         
         # Extract pixel values
-        print("Extracting pixel values...")
+        logger.info("Extracting pixel values...")
         pixels = torch.empty(size=(0, 3), device=self.device)
         for idx in tqdm(range(len(self.metadata))):
             image, _ = self.__getitem__(idx)
@@ -243,7 +246,7 @@ class SatelliteDataset(Dataset):
         cluster_idxs_list = []
         cluster_centers_list = []
         for k in range(2, K_max + 1):
-            print(f"K-means with {k} clusters.")
+            logger.info(f"K-means with {k} clusters.")
             km = KMeans(init="random", n_clusters=k, n_init=10, max_iter=300, tol=1e-04, random_state=0, verbose=0)
             cluster_idxs = km.fit_predict(pixels.cpu())
             cluster_centers = km.cluster_centers_

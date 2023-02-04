@@ -5,8 +5,9 @@ non_centered_diversified_code = "circular-margin-synthetic"
 
 """Dataset parameters"""
 # DATASET_NAMES = ['real']
-DATASET_NAMES = ['synthetic-NC-NM-diversified-1']
+# DATASET_NAMES = ['synthetic-NC-NM-diversified-1']
 # DATASET_NAMES = ['non-centered-no-margin']
+DATASET_NAMES = ['synthetic']
 TRAIN_PATH = []
 TEST_PATH = []
 if "real" in DATASET_NAMES:
@@ -67,12 +68,12 @@ LR = 0.000005
 N_EPOCHS = 5
 TEST_SIZE = 0.2
 VAL_FREQ = 10
-OUTPUT_DIR = "saved_models/synthetic-NC-NM-diversified-circular-margin/"
+OUTPUT_DIR = "output/"
 RESULTS_DIR = "results/"
-# MODEL_WEIGHTS = None
-MODEL_WEIGHTS = os.path.join(OUTPUT_DIR, "model_final.pt")
+MODEL_WEIGHTS = None
+# MODEL_WEIGHTS = os.path.join(OUTPUT_DIR, "model_final.pt")
 LOG_DIR = os.path.join(OUTPUT_DIR, "logs")
-EVAL_ONLY = True
+EVAL_ONLY = False
 FP_FN_analysis = True
 APPLY_TRAIN_TRANSFORMS = True
 MODEL_NAME = 'vgg16'
@@ -87,7 +88,7 @@ CIRCULAR_MARGIN_SIZE = 25
 TRAIN_TEST_SPLIT_RATIO = 0.0
 
 """Dataset generation parameters"""
-SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-non-centered-0.125m-50px-diversified-1/circular-margin-synthetic"
+SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-non-centered-0.125m-50px-diversified-1/proba"
 MESHES_DIR = "/var/storage/myeghiaz/GAN-vehicles-1000"
 TRAIN_MESHES_FRACTION = 0.8
 POSITIVE_LIMIT_TRAIN = 513

@@ -22,16 +22,19 @@ from losses import BCELoss, FocalLoss
 import config as cfg
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
+from logger import get_logger
+logger = get_logger()
+
 import pdb
 from torch.multiprocessing import Pool, Process, set_start_method
 try:
      set_start_method('spawn', force=True)
 except RuntimeError:
-    print("NOTE: UNKNOWN THING DIDN'T WORK.")
+    logger.warning("NOTE: UNKNOWN THING DIDN'T WORK.")
 
 def do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step, writer, start_epoch, iter_counter):
     if start_epoch >= cfg.N_EPOCHS:
-        print("Early stopping training.")
+        logger.info("Early stopping training.")
         return
     for epoch in range(start_epoch, cfg.N_EPOCHS):
         t = tqdm(train_loader, desc=f"Epoch #{epoch + 1}")
@@ -51,7 +54,7 @@ def do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step, w
         save_checkpoint(cfg, model, epoch, iter_counter, is_final=False)
 
         if (epoch + 1) % cfg.VAL_FREQ == 0:
-            print("Running validation...")
+            logger.info("Running validation...")
             with torch.no_grad():
                 activation = nn.Sigmoid()
                 t = tqdm(test_loader)
@@ -71,7 +74,7 @@ def do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step, w
     evaluator.plot_training_info()
 
 def do_test(test_loader, model, evaluator):
-    print("Running inference.")
+    logger.info("Running inference.")
     total_preds = torch.empty(size=(0, 1), device=device)
     total_gt = torch.empty(size=(0, 1), device=device)
     with torch.no_grad():
@@ -100,7 +103,7 @@ def do_test(test_loader, model, evaluator):
 
         # Print the results
         results_text = f"Accuracy: {round(100 * accuracy, 2)}%.\nF1-score: {round(100 * F1, 2)}%."
-        print(results_text)
+        logger.info(results_text)
         with open(os.path.join(cfg.OUTPUT_DIR, "results.txt"), 'w') as f:
             f.write(results_text)
     
@@ -111,7 +114,8 @@ if __name__ == '__main__':
     test_transform = transforms.get_test_transforms()
     train_set = SatelliteDataset(cfg.TRAIN_PATH, transform=train_transform, device=device)
     test_set = SatelliteDataset(cfg.TEST_PATH, transform=test_transform, device=device)
-    print(f"Train set. {train_set.details()}\nTest set. {test_set.details()}")
+    logger.info(f"Train set. {train_set.details()}")
+    logger.info(f"Test set. {test_set.details()}")
     
     """Create the dataloader"""
     train_loader = DataLoader(train_set, batch_size=cfg.BATCH_SIZE, num_workers=cfg.NUM_DATALOADER_WORKERS, shuffle=cfg.SHUFFLE)

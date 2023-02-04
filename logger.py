@@ -1,6 +1,6 @@
 import logging
 
-def get_logger(name):
+def get_logger(name="SatClass"):
     # create logger with 'spam_application'
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
