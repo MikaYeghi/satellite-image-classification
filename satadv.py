@@ -382,13 +382,11 @@ class SatAdv(nn.Module):
             )
             while invalid_image:
                 silhouettes = []
-                offsets = []
                 for i in range(len(meshes)):
-                    meshes[i], offset = self.randomly_move_and_rotate_mesh(meshes[i], scaling_factor, circular_margin=self.cfg.CIRCULAR_MARGIN)
+                    meshes[i] = self.randomly_move_and_rotate_mesh(meshes[i], scaling_factor, circular_margin=self.cfg.CIRCULAR_MARGIN)
                     silhouette = silhouette_renderer(meshes[i], cameras=cameras, lights=lights)
                     silhouette = (silhouette[..., 3] > 0.5).float()
                     silhouettes.append(silhouette)
-                    offsets.append(offset)
                 # Check whether any of the meshes intersect
                 if torch.any(reduce(lambda x, y: x + y, silhouettes) > 1.0):
                     invalid_image = True

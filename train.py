@@ -32,7 +32,7 @@ try:
 except RuntimeError:
     logger.warning("NOTE: UNKNOWN THING DIDN'T WORK.")
 
-def do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step, writer, start_epoch, iter_counter):
+def do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step, scheduler, writer, start_epoch, iter_counter):
     if start_epoch >= cfg.N_EPOCHS:
         logger.info("Early stopping training.")
         return
@@ -44,6 +44,7 @@ def do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step, w
             loss = train_step(images_batch, labels_batch)
             
             writer.add_scalar("Training loss", loss, iter_counter)
+            writer.add_scalar("LR", scheduler.get_last_lr()[-1], iter_counter)
             evaluator.record_train_loss(loss)
 
             t.set_description(f"Epoch: #{epoch + 1}. Loss: {round(loss, 8)}")
@@ -69,7 +70,7 @@ def do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step, w
                     evaluator.record_test_loss(val_loss.item())
 
                     t.set_description(f"Epoch: #{epoch + 1}. Validation loss: {round(val_loss.item(), 4)}.")
-
+        # scheduler.step()
     save_checkpoint(cfg, model, epoch, iter_counter, is_final=True)
     evaluator.plot_training_info()
 
@@ -125,9 +126,10 @@ if __name__ == '__main__':
     # model = create_model(cfg, device)
     start_epoch, iter_counter, model = load_checkpoint(cfg, device)
 
-    """Loss function, optimizer and evaluator"""
+    """Loss function, optimizer, scheduler and evaluator"""
     loss_fn = FocalLoss(alpha=cfg.FOCAL_LOSS['alpha'])
     optimizer = torch.optim.Adam(model.parameters(), lr=cfg.LR)
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=cfg.LR_GAMMA)
     evaluator = SatEvaluator(device=device, pos_label=0, save_dir=cfg.OUTPUT_DIR)
 
     """Training"""
@@ -139,7 +141,7 @@ if __name__ == '__main__':
     
     # Run training
     if not cfg.EVAL_ONLY:
-        do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step, writer, start_epoch, iter_counter)
+        do_train(train_loader, test_loader, evaluator, model, loss_fn, train_step, scheduler, writer, start_epoch, iter_counter)
 
     # Run evaluation
     do_test(test_loader, model, evaluator)

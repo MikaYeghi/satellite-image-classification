@@ -1,13 +1,12 @@
 import os
 shape_code = "x1.3z1.3"
 block_size = 8
-non_centered_diversified_code = "circular-margin-synthetic"
+non_centered_diversified_code = "final-version"
 
 """Dataset parameters"""
 # DATASET_NAMES = ['real']
-# DATASET_NAMES = ['synthetic-NC-NM-diversified-1']
+DATASET_NAMES = ['synthetic-NC-NM-diversified-1']
 # DATASET_NAMES = ['non-centered-no-margin']
-DATASET_NAMES = ['synthetic']
 TRAIN_PATH = []
 TEST_PATH = []
 if "real" in DATASET_NAMES:
@@ -65,10 +64,11 @@ else:
 BATCH_SIZE = 1024
 NUM_CLASSES = 1 # number of foreground classes
 LR = 0.000005
+LR_GAMMA = 0.3
 N_EPOCHS = 5
 TEST_SIZE = 0.2
 VAL_FREQ = 10
-OUTPUT_DIR = "output/"
+OUTPUT_DIR = "saved_models/synthetic-NC-NM-diversified-alpha-0.001/"
 RESULTS_DIR = "results/"
 MODEL_WEIGHTS = None
 # MODEL_WEIGHTS = os.path.join(OUTPUT_DIR, "model_final.pt")
@@ -88,7 +88,7 @@ CIRCULAR_MARGIN_SIZE = 25
 TRAIN_TEST_SPLIT_RATIO = 0.0
 
 """Dataset generation parameters"""
-SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-non-centered-0.125m-50px-diversified-1/proba"
+SYNTHETIC_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-non-centered-0.125m-50px-diversified-1/LR-schedule"
 MESHES_DIR = "/var/storage/myeghiaz/GAN-vehicles-1000"
 TRAIN_MESHES_FRACTION = 0.8
 POSITIVE_LIMIT_TRAIN = 513
