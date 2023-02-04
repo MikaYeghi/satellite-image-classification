@@ -83,7 +83,7 @@ SHUFFLE = True
 """Generating a train-test dataset from raw dataset"""
 RAW_DATASET_DIR = "/home/myeghiaz/Storage/GSD-0.125m_sample-size-50_mean-sampling-freq-1"
 RAW_DATASET_SAVE_DIR = "/home/myeghiaz/Storage/SatClass-Synthetic-non-centered-0.125m-50px-diversified-1/circular-margin-real"
-CIRCULAR_MARGIN = True
+CIRCULAR_MARGIN = False
 CIRCULAR_MARGIN_SIZE = 25
 TRAIN_TEST_SPLIT_RATIO = 0.0
 

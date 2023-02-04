@@ -462,7 +462,7 @@ class SatAdv(nn.Module):
             # The numbers below were selected to make sure that the elevation is above 70 degrees
             distance = 5.0
             elevation, azimuth = (90, 0)
-            lights_direction = torch.tensor([random.uniform(-1, 1),-1.0,random.uniform(-1, 1)], device=self.device, requires_grad=True).unsqueeze(0)
+            lights_direction = torch.tensor([random.uniform(-1, 1),-1.0,random.uniform(-1, 1)], device=self.device).unsqueeze(0)
             scaling_factor = random.uniform(0.70, 0.80)
             intensity = random.uniform(0.5, 2.0)
             
