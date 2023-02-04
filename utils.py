@@ -174,14 +174,6 @@ def generate_dataset_from_raw(dataset_dir, save_dir, circular_margin=False, circ
     images_dir = os.path.join(dataset_dir, "images")
     annotation_files = [annotation_file.split('/')[-1] for annotation_file in tqdm(glob.glob(annotations_dir + "/*.pkl"))]
     
-    """EXTRA CODE START"""
-    # annotation_files = []
-    # for positive_image in glob.glob("/home/myeghiaz/Storage/SatClass-Real-non-centered-0.125m-50px-no-margin/*/positive/*.jpg"):
-    #     image_code = positive_image.split('/')[-1].split('.')[0]
-    #     annotation_file = image_code + ".pkl"
-    #     annotation_files.append(annotation_file)
-    """EXTRA CODE END"""
-    
     # Create the save directories
     trainpos_dir = os.path.join(save_dir, "train", "positive")
     trainneg_dir = os.path.join(save_dir, "train", "negative")
@@ -191,22 +183,6 @@ def generate_dataset_from_raw(dataset_dir, save_dir, circular_margin=False, circ
     Path(trainneg_dir).mkdir(parents=True, exist_ok=True)
     Path(testpos_dir).mkdir(parents=True, exist_ok=True)
     Path(testneg_dir).mkdir(parents=True, exist_ok=True)
-    
-    """EXTRA CODE START"""
-    # # Copy the negative images
-    # print("Copying the negative samples...")
-    # negative_images = glob.glob("/home/myeghiaz/Storage/SatClass-Real-non-centered-0.125m-50px-no-margin/*/negative/*.jpg")
-    # for negative_image in tqdm(negative_images):
-    #     image_code = negative_image.split('/')[-1].split('.')[0]
-    #     if image_code.split('_')[0] == "0001":
-    #         is_test = True
-    #     else:
-    #         is_test = False
-    #     if is_test:
-    #         shutil.copy(negative_image, testneg_dir)
-    #     else:
-    #         shutil.copy(negative_image, trainneg_dir)
-    """EXTRA CODE END"""
     
     # Sort the images into 4 categories: train/test positive/negative (2*2=4). Copy correspondingly.
     print("Generating the classification dataset...")
@@ -414,3 +390,24 @@ def randomly_move_and_rotate_meshes(meshes, scaling_factors, device='cuda'):
         meshes_.append(mesh.clone().to(device))
         
     return meshes_
+
+def sample_paraboloid():
+    """
+    This function samples from a pdf that is a paraboloid described by z=3/8*(x^2+y^2).
+    """
+    is_valid = False
+    
+    while not is_valid:
+        # Randomly sample x and y
+        x = random.uniform(-1, 1)
+        y = random.uniform(-1, 1)
+        
+        # Accept the sample
+        z = 3 / 8 * (x * x + y * y)
+        accept = random.uniform(0, 0.75) # 0.75 is the maximum in the square [-1, -1] to [+1, +1]
+        if accept <= z:
+            is_valid = True
+        else:
+            is_valid = False
+        
+    return (x, y)
