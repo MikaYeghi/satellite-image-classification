@@ -1,11 +1,14 @@
 import torch
-from sklearn.metrics import accuracy_score, f1_score, confusion_matrix
+from sklearn.metrics import accuracy_score, f1_score, confusion_matrix, precision_score, recall_score
 from matplotlib import pyplot as plt
 from torchvision.utils import save_image
 from pathlib import Path
 import pandas as pd
 import seaborn as sn
 import os
+
+from logger import get_logger
+logger = get_logger("Utils logger")
 
 class SatEvaluator():
     def __init__(self, device='cuda:0', pos_label=0, save_dir="results"):
@@ -49,6 +52,12 @@ class SatEvaluator():
     
     def evaluate_confmat(self):
         return confusion_matrix(self.total_gt.cpu(), self.total_preds.cpu(), normalize='true')
+    
+    def evaluate_precision(self):
+        return precision_score(self.total_gt.cpu(), self.total_preds.cpu(), pos_label=self.pos_label)
+    
+    def evaluate_recall(self):
+        return recall_score(self.total_gt.cpu(), self.total_preds.cpu(), pos_label=self.pos_label)
     
     def plot_training_info(self):
         plt.figure(figsize=(6.4, 7.5))
