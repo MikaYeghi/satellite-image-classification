@@ -23,7 +23,7 @@ import config as cfg
 device = 'cuda:0' if torch.cuda.is_available() else 'cpu'
 
 from logger import get_logger
-logger = get_logger()
+logger = get_logger("Train logger")
 
 import pdb
 from torch.multiprocessing import Pool, Process, set_start_method
