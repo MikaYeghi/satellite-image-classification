@@ -17,6 +17,9 @@ from sklearn.model_selection import train_test_split
 from pathlib import Path
 from pytorch3d.transforms import euler_angles_to_matrix
 
+from logger import get_logger
+logger = get_logger("Utils logger")
+
 import pdb
 
 def make_train_step(model, loss_fn, optimizer):
@@ -48,7 +51,7 @@ def plot_training_info(train_losses, val_losses, save_dir='results'):
     plt.title("Validation loss")
     
     save_dir = os.path.join(save_dir, "results.jpg")
-    print(f"Saving the graphs to {save_dir}")
+    logger.info(f"Saving the graphs to {save_dir}")
     plt.savefig(save_dir)
     
 def get_F1_stats(preds, targets):
@@ -111,11 +114,11 @@ def initialize_empty_model(cfg, device='cuda'):
     
     # Initialize the model
     if model_name == 'resnet101':
-        print("Initializing a ResNet-101 model.")
+        logger.info("Initializing a ResNet-101 model.")
         model = models.resnet101(pretrained=True)
         model.fc = torch.nn.Linear(2048, 1, device=device, dtype=torch.float32)
     elif model_name == 'vgg16':
-        print("Initializing a VGG-16 model.")
+        logger.info("Initializing a VGG-16 model.")
         model = models.vgg16(pretrained=True)
         model.classifier[6] = torch.nn.Linear(4096, 1, device=device, dtype=torch.float32)
     else:
@@ -129,10 +132,10 @@ def create_model(cfg, device='cuda'):
     
     if cfg.MODEL_WEIGHTS:
         if cfg.NUM_GPUS > 1:
-            print(f"Loading model weights from {cfg.MODEL_WEIGHTS}")
+            logger.info(f"Loading model weights from {cfg.MODEL_WEIGHTS}")
             model.module.load_state_dict(torch.load(cfg.MODEL_WEIGHTS))
         else:
-            print(f"Loading model weights from {cfg.MODEL_WEIGHTS}")
+            logger.info(f"Loading model weights from {cfg.MODEL_WEIGHTS}")
             model.load_state_dict(torch.load(cfg.MODEL_WEIGHTS))
     
     # Move the model to the device
@@ -141,7 +144,7 @@ def create_model(cfg, device='cuda'):
     return model
 
 def load_meshes(cfg, shuffle_=True, device='cuda'):
-    print(f"Loading meshes from {cfg.MESHES_DIR}")
+    logger.info(f"Loading meshes from {cfg.MESHES_DIR}")
     meshes = []
     obj_paths = glob.glob(cfg.MESHES_DIR + "/*.obj")
     for obj_path in tqdm(obj_paths):
@@ -185,7 +188,7 @@ def generate_dataset_from_raw(dataset_dir, save_dir, circular_margin=False, circ
     Path(testneg_dir).mkdir(parents=True, exist_ok=True)
     
     # Sort the images into 4 categories: train/test positive/negative (2*2=4). Copy correspondingly.
-    print("Generating the classification dataset...")
+    logger.info("Generating the classification dataset...")
     for annotation_file in tqdm(annotation_files):
         # Get the file paths
         image_file = annotation_file.split('.')[0] + ".jpg"
@@ -222,7 +225,7 @@ def generate_dataset_from_raw(dataset_dir, save_dir, circular_margin=False, circ
             save_path = trainneg_dir
         shutil.copy(image_path, save_path)
     
-    print("Dataset generation finished!")
+    logger.info("Dataset generation finished!")
 
 def generate_train_test(dataset_dir, save_dir, split_ratio=0.8):
     """
@@ -261,7 +264,7 @@ def generate_train_test(dataset_dir, save_dir, split_ratio=0.8):
         positive_images_paths = positive_images_paths + positive_images
         negative_images_paths = negative_images_paths + negative_images
     
-    print(f"Extracted {len(positive_images_paths)} positive images and {len(negative_images_paths)} negative images.")
+    logger.info(f"Extracted {len(positive_images_paths)} positive images and {len(negative_images_paths)} negative images.")
     
     # Shuffle and randomly split the positive and negative lists
     shuffle(positive_images_paths)
@@ -294,20 +297,20 @@ def generate_train_test(dataset_dir, save_dir, split_ratio=0.8):
     Path(test_neg_dir).mkdir(parents=True, exist_ok=True)
     
     # Copy the files
-    print("Copying positive train files...")
+    logger.info("Copying positive train files...")
     for train_pos_ in train_pos:
         shutil.copy(train_pos_, train_pos_dir)
-    print("Copying negative train files...")
+    logger.info("Copying negative train files...")
     for train_neg_ in train_neg:
         shutil.copy(train_neg_, train_neg_dir)
-    print("Copying positive test files...")
+    logger.info("Copying positive test files...")
     for test_pos_ in test_pos:
         shutil.copy(test_pos_, test_pos_dir)
-    print("Copying negative test files...")
+    logger.info("Copying negative test files...")
     for test_neg_ in test_neg:
         shutil.copy(test_neg_, test_neg_dir)
     
-    print("Completed dataset generation!")
+    logger.info("Completed dataset generation!")
     
 def blend_images(A, B, alpha_A=0.5, alpha_B=0.5):
     """
@@ -324,7 +327,7 @@ def save_checkpoint(cfg, model, epoch, iter_counter, is_final):
     else:
         save_path = os.path.join(cfg.OUTPUT_DIR, f"model_{iter_counter}.pt")
     
-    print(f"Saving checkpoint to {save_path}")
+    logger.info(f"Saving checkpoint to {save_path}")
     
     model_state_dict = model.state_dict() if cfg.NUM_GPUS == 1 else model.module.state_dict()
     torch.save({
@@ -335,7 +338,7 @@ def save_checkpoint(cfg, model, epoch, iter_counter, is_final):
 
 def load_checkpoint(cfg, device='cuda'):
     if cfg.MODEL_WEIGHTS:
-        print(f"Loading checkpoint from {cfg.MODEL_WEIGHTS}")
+        logger.info(f"Loading checkpoint from {cfg.MODEL_WEIGHTS}")
         # If there is a model checkpoint, load it
         if cfg.MODEL_WEIGHTS.split('.')[-1] == 'pth':
             # Load as the old checkpoint

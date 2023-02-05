@@ -16,7 +16,7 @@ from pathlib import Path
 import config as cfg
 
 from logger import get_logger
-logger = get_logger()
+logger = get_logger("Dataset logger")
 
 import pdb
 
