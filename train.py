@@ -104,9 +104,10 @@ def do_test(test_loader, model, evaluator):
 
         # Print the results
         results_text = f"Accuracy: {round(100 * accuracy, 2)}%.\nF1-score: {round(100 * F1, 2)}%."
-        logger.info(results_text)
         with open(os.path.join(cfg.OUTPUT_DIR, "results.txt"), 'w') as f:
             f.write(results_text)
+        logger.info(f"Accuracy: {round(100 * accuracy, 2)}%.")
+        logger.info(f"F1-score: {round(100 * F1, 2)}%.")
     
 if __name__ == '__main__':
     """Load the data set"""

@@ -16,6 +16,9 @@ from evaluator import SatEvaluator
 from losses import BCELoss, ColorForce, BCEColor, ClassificationScore, TVCalculator, GMMLoss, NonPrintabilityScore
 from utils import blend_images, load_descriptive_colors, load_meshes, sample_random_elev_azimuth, randomly_move_and_rotate_meshes
 
+from logger import get_logger
+logger = get_logger("Attacker logger")
+
 import pdb
 
 class BaseAttacker:
@@ -246,7 +249,7 @@ class FGSMAttacker(BaseAttacker):
                 # Run prediction on the image
                 pred = self.activation(self.model(image))
                 preds.append(pred.item())
-                print(f"Mean pred: {sum(preds) / len(preds)}. Min pred: {min(preds)}")
+                logger.info(f"Mean pred: {sum(preds) / len(preds)}. Min pred: {min(preds)}")
                 
                 # Compute the unit loss
                 label_batched = torch.tensor([true_label], device=self.device, dtype=torch.float).unsqueeze(0)
@@ -277,7 +280,7 @@ class FGSMAttacker(BaseAttacker):
         return text
     
     def save(self):
-        print(f"Saving correct-adversarial image pairs to {self.save_dir}")
+        logger.info(f"Saving correct-adversarial image pairs to {self.save_dir}")
         idx = 0
         for attacked_image in self.adversarial_examples_list:
             # Retrieve the original and final images
@@ -350,7 +353,7 @@ class UnifiedTexturesAttacker(BaseAttacker):
     
     def load_adv_textures(self, cfg):
         if cfg.UNIFIED_TEXTURES_PATH:
-            print(f"Loading adversarial textures from {cfg.UNIFIED_TEXTURES_PATH}")
+            logger.info(f"Loading adversarial textures from {cfg.UNIFIED_TEXTURES_PATH}")
             adv_textures = Image.open(cfg.UNIFIED_TEXTURES_PATH)
             adv_textures = adv_textures.convert('RGB')
             adv_textures = torchvision.transforms.functional.pil_to_tensor(adv_textures)
@@ -359,7 +362,7 @@ class UnifiedTexturesAttacker(BaseAttacker):
             adv_textures = adv_textures.to(self.device)
             return adv_textures
         else:
-            print("Random initialization of the texture map.")
+            logger.info("Random initialization of the texture map.")
             return None
     
     def get_loss_fns(self, cfg):
@@ -397,7 +400,7 @@ class UnifiedTexturesAttacker(BaseAttacker):
         """
         Perform adversarial attack to obtain a unified adversarial texture map.
         """
-        print("Performing unified adversarial attack on textures.")
+        logger.info("Performing unified adversarial attack on textures.")
         # Initialize the attacked texture map as a random map
         adv_textures = torch.randn(size=self.meshes[0].textures.maps_padded().shape, device=self.device)
         adv_textures.requires_grad_(True)
@@ -465,7 +468,7 @@ class UnifiedTexturesAttacker(BaseAttacker):
         Evaluate the adversariality of the attack.
         """
         assert self.adv_textures is not None, "No adversarial textures loaded!"
-        print("Running evaluation of the adversarial texture map.")
+        logger.info("Running evaluation of the adversarial texture map.")
         
         # Initialize the evaluator        
         evaluator = SatEvaluator(device=self.device, pos_label=0, save_dir=self.eval_save_dir)
@@ -496,7 +499,7 @@ class UnifiedTexturesAttacker(BaseAttacker):
         
         # Print the results [MOVE THE CODE BELOW INTO EVALUATOR CLASS]
         results_text = f"Accuracy: {round(100 * accuracy, 2)}%.\nF1-score: {round(100 * F1, 2)}%."
-        print(results_text)
+        logger.info(results_text)
         with open(os.path.join(self.cfg.ADVERSARIAL_SAVE_DIR, "results.txt"), 'w') as f:
             f.write(results_text)
     

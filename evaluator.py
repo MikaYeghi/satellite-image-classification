@@ -8,7 +8,7 @@ import seaborn as sn
 import os
 
 from logger import get_logger
-logger = get_logger("Utils logger")
+logger = get_logger("Evaluator logger")
 
 class SatEvaluator():
     def __init__(self, device='cuda:0', pos_label=0, save_dir="results"):
